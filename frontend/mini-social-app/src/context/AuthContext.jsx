@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { Box, CircularProgress } from '@mui/material';
 import api from '../api/axios';
 
 const AuthContext = createContext();
@@ -7,27 +8,30 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // On app load, verify cookie with backend
   useEffect(() => {
     api.get('/api/auth/me')
       .then(({ data }) => setUser(data))
-      .catch(() => setUser(null))
+      .catch(() => setUser(null))  // 401 = not logged in, that's fine
       .finally(() => setLoading(false));
   }, []);
 
   const login = (data) => setUser(data);
 
   const logout = async () => {
-    await api.post('/api/auth/logout');
+    try { await api.post('/api/auth/logout'); } catch {}
     setUser(null);
   };
 
-  const isAuthenticated = !!user;
-
-  if (loading) return null; // wait for cookie verification
+  if (loading) {
+    return (
+      <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
+        <CircularProgress sx={{ color: '#1976d2' }} />
+      </Box>
+    );
+  }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

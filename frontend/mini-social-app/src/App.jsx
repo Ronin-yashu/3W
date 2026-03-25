@@ -13,6 +13,11 @@ const PrivateRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  return !isAuthenticated ? children : <Navigate to="/" replace />;
+};
+
 function AppRoutes() {
   const [darkMode, setDarkMode] = useState(false);
   const theme = createTheme({
@@ -22,6 +27,7 @@ function AppRoutes() {
     },
     typography: { fontFamily: "'Inter', 'Segoe UI', sans-serif" }
   });
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -30,8 +36,8 @@ function AppRoutes() {
           <Route path="/" element={<PrivateRoute><Feed darkMode={darkMode} setDarkMode={setDarkMode} /></PrivateRoute>} />
           <Route path="/create" element={<PrivateRoute><CreatePost /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
