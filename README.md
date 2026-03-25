@@ -10,6 +10,14 @@
 [![MUI](https://img.shields.io/badge/MUI-v5-007FFF?logo=mui&logoColor=white)](https://mui.com)
 [![Socket.io](https://img.shields.io/badge/Socket.io-Real--time-010101?logo=socket.io)](https://socket.io)
 
+### 🔗 Live Demo
+
+| | Link |
+|---|---|
+| 🌍 **Frontend** | [https://3-w-sigma.vercel.app](https://3-w-sigma.vercel.app) |
+| ⚙️ **Backend** | [https://threew-fixf.onrender.com](https://threew-fixf.onrender.com) |
+| 📦 **Repository** | [https://github.com/Ronin-yashu/3W](https://github.com/Ronin-yashu/3W) |
+
 </div>
 
 ---
@@ -189,12 +197,12 @@ Only **2 collections** as required:
 
 ## 🌍 Deployment
 
-| Service | Platform |
-|---|---|
-| Frontend | Vercel |
-| Backend | Render |
-| Database | MongoDB Atlas |
-| Images | Cloudinary |
+| Service | Platform | URL |
+|---|---|---|
+| Frontend | Vercel | [https://3-w-sigma.vercel.app](https://3-w-sigma.vercel.app) |
+| Backend | Render | [https://threew-fixf.onrender.com](https://threew-fixf.onrender.com) |
+| Database | MongoDB Atlas | — |
+| Images | Cloudinary | — |
 
 ---
 
