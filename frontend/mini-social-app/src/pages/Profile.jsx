@@ -1,43 +1,36 @@
 /**
- * @file Profile.jsx
- * @description Polished profile page — avatar, bio edit, stats (posts/followers/following),
- * own posts grid/list, edit bio inline.
+ * Profile.jsx — own posts list, followers/following counts, bio edit.
  */
 import { useEffect, useState } from 'react';
 import {
-  Box, Typography, Avatar, Button, TextField, IconButton,
-  Paper, Grid, Card, CardMedia, Tabs, Tab, AppBar, Toolbar,
-  Divider, useTheme, useMediaQuery, Skeleton, Chip
+  Box, Typography, Avatar, Paper, AppBar, Toolbar,
+  Divider, useTheme, useMediaQuery, Skeleton, IconButton, TextField
 } from '@mui/material';
-import ArrowBackIcon   from '@mui/icons-material/ArrowBack';
+import ArrowBackIcon    from '@mui/icons-material/ArrowBack';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import CheckIcon       from '@mui/icons-material/Check';
-import CloseIcon       from '@mui/icons-material/Close';
-import GridViewIcon    from '@mui/icons-material/GridView';
-import ViewListIcon    from '@mui/icons-material/ViewList';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
-import PostCard from '../components/PostCard';
+import CheckIcon        from '@mui/icons-material/Check';
+import CloseIcon        from '@mui/icons-material/Close';
+import { useNavigate }  from 'react-router-dom';
+import { useAuth }      from '../context/AuthContext';
+import api              from '../api/axios';
+import PostCard         from '../components/PostCard';
 
 export default function Profile({ darkMode }) {
-  const { user } = useAuth();
-  const navigate  = useNavigate();
-  const theme     = useTheme();
-  const isMobile  = useMediaQuery(theme.breakpoints.down('sm'));
+  const { user }   = useAuth();
+  const navigate   = useNavigate();
+  const theme      = useTheme();
+  const isMobile   = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [profile, setProfile]     = useState(null);
-  const [posts, setPosts]         = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [profile, setProfile]       = useState(null);
+  const [posts, setPosts]           = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [editingBio, setEditingBio] = useState(false);
-  const [bio, setBio]             = useState('');
-  const [savingBio, setSavingBio] = useState(false);
-  const [viewMode, setViewMode]   = useState('list'); // 'grid' | 'list'
-  const [tab, setTab]             = useState(0);
+  const [bio, setBio]               = useState('');
+  const [savingBio, setSavingBio]   = useState(false);
 
-  const bg      = darkMode ? '#121212' : '#f5f7fa';
-  const cardBg  = darkMode ? '#1e1e1e' : '#fff';
-  const border  = darkMode ? '#2a2a2a' : '#e8eaf0';
+  const bg     = darkMode ? '#121212' : '#f5f7fa';
+  const cardBg = darkMode ? '#1e1e1e' : '#fff';
+  const border = darkMode ? '#2a2a2a' : '#e8eaf0';
 
   useEffect(() => {
     const load = async () => {
@@ -47,7 +40,7 @@ export default function Profile({ darkMode }) {
         setProfile(data.user);
         setPosts(data.posts);
         setBio(data.user.bio || '');
-      } catch (err) { console.error(err); }
+      } catch (e) { console.error(e); }
       finally { setLoading(false); }
     };
     if (user?.username) load();
@@ -62,11 +55,8 @@ export default function Profile({ darkMode }) {
     } finally { setSavingBio(false); }
   };
 
-  const updatePost = (updated) => setPosts(prev => prev.map(p => p._id === updated._id ? updated : p));
+  const updatePost = (p)  => setPosts(prev => prev.map(x => x._id === p._id ? p : x));
   const deletePost = (id) => setPosts(prev => prev.filter(p => p._id !== id));
-
-  const likedPosts = posts.filter(p => p.likes?.some(l => l.username === user?.username));
-  const displayPosts = tab === 0 ? posts : likedPosts;
 
   if (loading) return (
     <Box bgcolor={bg} minHeight="100vh">
@@ -86,7 +76,7 @@ export default function Profile({ darkMode }) {
       </AppBar>
 
       <Box sx={{ maxWidth: 600, mx: 'auto', px: { xs: 1.5, sm: 2 }, pt: 3 }}>
-        {/* Profile Card */}
+        {/* Profile card */}
         <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: border, bgcolor: cardBg, p: { xs: 2.5, sm: 3 }, mb: 2 }}>
           <Box display="flex" alignItems="flex-start" gap={2} mb={2}>
             <Avatar sx={{ width: { xs: 64, sm: 80 }, height: { xs: 64, sm: 80 }, bgcolor: '#1976d2', fontSize: { xs: 26, sm: 32 }, fontWeight: 800, boxShadow: '0 4px 16px rgba(25,118,210,0.3)' }}>
@@ -95,12 +85,9 @@ export default function Profile({ darkMode }) {
             <Box flex={1}>
               <Typography fontWeight={800} fontSize={{ xs: 17, sm: 20 }}>{user?.username}</Typography>
               <Typography variant="body2" color="primary" fontWeight={600} mb={0.5}>@{user?.username}</Typography>
-
-              {/* Bio */}
               {editingBio ? (
                 <Box>
-                  <TextField
-                    fullWidth multiline minRows={2} maxRows={4} size="small"
+                  <TextField fullWidth multiline minRows={2} maxRows={4} size="small"
                     value={bio} onChange={e => setBio(e.target.value.slice(0, 160))}
                     placeholder="Write a bio..."
                     sx={{ '& .MuiOutlinedInput-root': { fontSize: 13, borderRadius: 2 } }}
@@ -116,7 +103,7 @@ export default function Profile({ darkMode }) {
               ) : (
                 <Box display="flex" alignItems="center" gap={0.5}>
                   <Typography variant="body2" color={bio ? (darkMode ? '#ccc' : '#444') : 'text.secondary'} fontStyle={bio ? 'normal' : 'italic'} fontSize={13}>
-                    {bio || 'No bio yet'}
+                    {bio || 'No bio yet — tap ✏️ to add one'}
                   </Typography>
                   <IconButton size="small" onClick={() => setEditingBio(true)} sx={{ color: '#aaa', '&:hover': { color: '#1976d2' } }}>
                     <EditOutlinedIcon sx={{ fontSize: 15 }} />
@@ -126,7 +113,6 @@ export default function Profile({ darkMode }) {
             </Box>
           </Box>
 
-          {/* Stats row */}
           <Divider sx={{ borderColor: border, mb: 2 }} />
           <Box display="flex" justifyContent="space-around">
             {[
@@ -142,60 +128,13 @@ export default function Profile({ darkMode }) {
           </Box>
         </Paper>
 
-        {/* Tabs + view toggle */}
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)}
-            TabIndicatorProps={{ style: { display: 'none' } }}
-            sx={{ minHeight: 36 }}>
-            {['My Posts', 'Liked'].map((label, i) => (
-              <Tab key={label} label={label} sx={{
-                minHeight: 36, fontSize: 13, fontWeight: 600, borderRadius: 5, px: 2,
-                color: tab === i ? '#fff !important' : (darkMode ? '#aaa' : '#888'),
-                bgcolor: tab === i ? '#1976d2' : 'transparent',
-                transition: 'all 0.2s', minWidth: 'unset'
-              }} />
-            ))}
-          </Tabs>
-          <Box display="flex" gap={0.5}>
-            <IconButton size="small" onClick={() => setViewMode('list')} sx={{ color: viewMode === 'list' ? '#1976d2' : '#aaa' }}><ViewListIcon /></IconButton>
-            <IconButton size="small" onClick={() => setViewMode('grid')} sx={{ color: viewMode === 'grid' ? '#1976d2' : '#aaa' }}><GridViewIcon /></IconButton>
-          </Box>
-        </Box>
-
-        {displayPosts.length === 0 ? (
+        {posts.length === 0 ? (
           <Box textAlign="center" py={6}>
-            <Typography fontSize={40}>{tab === 0 ? '📭' : '❤️'}</Typography>
-            <Typography variant="body2" color="text.secondary" mt={1}>
-              {tab === 0 ? 'No posts yet' : 'No liked posts'}
-            </Typography>
+            <Typography fontSize={40}>📭</Typography>
+            <Typography variant="body2" color="text.secondary" mt={1}>No posts yet</Typography>
           </Box>
-        ) : viewMode === 'grid' ? (
-          // Grid view — image thumbnails
-          <Grid container spacing={0.5}>
-            {displayPosts.map(post => (
-              <Grid item xs={4} key={post._id}>
-                <Box sx={{
-                  aspectRatio: '1', overflow: 'hidden', borderRadius: 1, cursor: 'pointer',
-                  bgcolor: darkMode ? '#2a2a2a' : '#e8eaf0',
-                  '&:hover': { opacity: 0.85 }, transition: 'opacity 0.2s'
-                }}>
-                  {post.imageUrl ? (
-                    <Box component="img" src={post.imageUrl} alt=""
-                      sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  ) : (
-                    <Box display="flex" alignItems="center" justifyContent="center" height="100%" p={1}>
-                      <Typography variant="caption" color="text.secondary" textAlign="center" fontSize={11} sx={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {post.text}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
         ) : (
-          // List view
-          displayPosts.map(post => (
+          posts.map(post => (
             <PostCard key={post._id} post={post} onUpdate={updatePost} onDelete={deletePost} darkMode={darkMode} />
           ))
         )}
