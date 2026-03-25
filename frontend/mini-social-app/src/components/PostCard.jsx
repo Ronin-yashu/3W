@@ -54,6 +54,34 @@ export default function PostCard({ post, onUpdate, darkMode }) {
       + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
+  // ✅ FIXED: stable action config — key is always a fixed string, never changes on resize
+  const actions = [
+    {
+      id: 'like',   // stable key — does NOT depend on isMobile
+      label: 'Like',
+      icon: isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />,
+      color: isLiked ? '#e53935' : 'text.secondary',
+      hoverBg: isLiked ? '#fce4ec' : (darkMode ? '#2a2a2a' : '#f5f5f5'),
+      onClick: handleLike
+    },
+    {
+      id: 'comment',
+      label: 'Comment',
+      icon: <ChatBubbleOutlineIcon fontSize="small" />,
+      color: showComments ? '#1976d2' : 'text.secondary',
+      hoverBg: darkMode ? '#2a2a2a' : '#f5f5f5',
+      onClick: () => setShowComments(!showComments)
+    },
+    {
+      id: 'share',
+      label: 'Share',
+      icon: <ShareOutlinedIcon fontSize="small" />,
+      color: 'text.secondary',
+      hoverBg: darkMode ? '#2a2a2a' : '#f5f5f5',
+      onClick: handleShare
+    }
+  ];
+
   return (
     <Card elevation={0} sx={{
       mb: { xs: 1.5, sm: 2 }, borderRadius: 3, border: '1px solid', borderColor: border, bgcolor: cardBg,
@@ -118,47 +146,31 @@ export default function PostCard({ post, onUpdate, darkMode }) {
 
         <Divider sx={{ mb: 0.5, borderColor: border }} />
 
-        {/* Action Row */}
+        {/* Action Row — keys are stable 'like'|'comment'|'share', never change on resize */}
         <Box display="flex" alignItems="center" justifyContent="space-around" pt={0.5}>
-          {[
-            {
-              label: isMobile ? '' : 'Like',
-              icon: isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />,
-              color: isLiked ? '#e53935' : 'text.secondary',
-              hoverBg: isLiked ? '#fce4ec' : (darkMode ? '#2a2a2a' : '#f5f5f5'),
-              onClick: handleLike
-            },
-            {
-              label: isMobile ? '' : 'Comment',
-              icon: <ChatBubbleOutlineIcon fontSize="small" />,
-              color: showComments ? '#1976d2' : 'text.secondary',
-              hoverBg: darkMode ? '#2a2a2a' : '#f5f5f5',
-              onClick: () => setShowComments(!showComments)
-            },
-            {
-              label: isMobile ? '' : 'Share',
-              icon: <ShareOutlinedIcon fontSize="small" />,
-              color: 'text.secondary',
-              hoverBg: darkMode ? '#2a2a2a' : '#f5f5f5',
-              onClick: handleShare
-            }
-          ].map(({ label, icon, color, hoverBg, onClick }) => (
-            <Box key={label + icon.type.displayName} onClick={onClick} display="flex" alignItems="center"
+          {actions.map(({ id, label, icon, color, hoverBg, onClick }) => (
+            <Box
+              key={id}
+              onClick={onClick}
+              display="flex"
+              alignItems="center"
               gap={isMobile ? 0 : 0.8}
               sx={{
                 cursor: 'pointer', color, px: { xs: 1.5, sm: 2 }, py: { xs: 1, sm: 0.8 },
                 borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, justifyContent: 'center',
                 '&:hover': { bgcolor: hoverBg }, transition: 'all 0.15s'
-              }}>
+              }}
+            >
               {icon}
-              {!isMobile && label && (
+              {/* Label only shows on desktop — toggling this does NOT remount the box */}
+              {!isMobile && (
                 <Typography variant="body2" fontWeight={600} fontSize={13}>{label}</Typography>
               )}
             </Box>
           ))}
         </Box>
 
-        {/* Comments */}
+        {/* Comments Section */}
         <Collapse in={showComments}>
           <Box mt={1.5} pt={1.5} sx={{ borderTop: '1px solid', borderColor: border }}>
             {post.comments?.map((c, i) => (
