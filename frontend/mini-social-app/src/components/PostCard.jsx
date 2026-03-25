@@ -1,34 +1,36 @@
 /**
- * @file PostCard.jsx
- * Optimistic like/comment, delete own post, edit own post,
- * image lightbox on click, emoji picker, char counter, follow button.
+ * PostCard.jsx
+ * Features: optimistic like/comment, follow button, edit post, delete post,
+ * emoji picker, char counter on comment.
+ * No lightbox, no bio, no profile grid — clean and focused.
  */
 import {
   Card, CardContent, Typography, IconButton, Box, TextField,
-  Avatar, Collapse, Divider, Snackbar, Alert, Chip, Dialog,
-  useTheme, useMediaQuery, Menu, MenuItem, ListItemIcon
+  Avatar, Collapse, Divider, Snackbar, Alert, Chip,
+  useTheme, useMediaQuery, Menu, MenuItem, ListItemIcon, Dialog
 } from '@mui/material';
-import FavoriteIcon        from '@mui/icons-material/Favorite';
-import FavoriteBorderIcon  from '@mui/icons-material/FavoriteBorder';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import ShareOutlinedIcon   from '@mui/icons-material/ShareOutlined';
-import SendIcon            from '@mui/icons-material/Send';
-import MoreVertIcon        from '@mui/icons-material/MoreVert';
-import DeleteOutlineIcon   from '@mui/icons-material/DeleteOutline';
-import EditOutlinedIcon    from '@mui/icons-material/EditOutlined';
-import CloseIcon           from '@mui/icons-material/Close';
-import CheckIcon           from '@mui/icons-material/Check';
+import FavoriteIcon             from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon       from '@mui/icons-material/FavoriteBorder';
+import ChatBubbleOutlineIcon    from '@mui/icons-material/ChatBubbleOutline';
+import ShareOutlinedIcon        from '@mui/icons-material/ShareOutlined';
+import SendIcon                 from '@mui/icons-material/Send';
+import MoreVertIcon             from '@mui/icons-material/MoreVert';
+import DeleteOutlineIcon        from '@mui/icons-material/DeleteOutline';
+import EditOutlinedIcon         from '@mui/icons-material/EditOutlined';
+import CloseIcon                from '@mui/icons-material/Close';
+import CheckIcon                from '@mui/icons-material/Check';
 import EmojiEmotionsOutlinedIcon from '@mui/icons-material/EmojiEmotionsOutlined';
 import { useState, useCallback } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
-// Simple emoji list (no heavy library needed)
 const EMOJIS = ['😀','😂','😍','🔥','👍','❤️','😎','🎉','😢','😡','🤔','💯','✨','🙌','😊','🥳','😭','🤣','💀','👀','🫶','💪','🥰','😴','🤯'];
+const MAX_COMMENT = 200;
+const MAX_POST    = 500;
 
 export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
   const { user } = useAuth();
-  const theme = useTheme();
+  const theme    = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [comment, setComment]           = useState('');
@@ -36,24 +38,22 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
   const [copied, setCopied]             = useState(false);
   const [liking, setLiking]             = useState(false);
   const [imgSize, setImgSize]           = useState({ w: 0, h: 0 });
-  const [lightbox, setLightbox]         = useState(false);   // fullscreen image
-  const [menuAnchor, setMenuAnchor]     = useState(null);    // 3-dot menu
-  const [editing, setEditing]           = useState(false);   // edit mode
+  const [menuAnchor, setMenuAnchor]     = useState(null);
+  const [editing, setEditing]           = useState(false);
   const [editText, setEditText]         = useState(post.text || '');
   const [saving, setSaving]             = useState(false);
-  const [showEmoji, setShowEmoji]       = useState(false);   // emoji picker
+  const [showEmoji, setShowEmoji]       = useState(false);
   const [following, setFollowing]       = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const isLiked   = post.likes?.some(l => l.userId === user?.userId);
-  const isOwner   = post.username === user?.username;
-  const cardBg    = darkMode ? '#1e1e1e' : '#fff';
-  const border    = darkMode ? '#2a2a2a' : '#e8eaf0';
-  const commentBg = darkMode ? '#2a2a2a' : '#f5f7fa';
+  const isLiked    = post.likes?.some(l => l.userId === user?.userId);
+  const isOwner    = post.username === user?.username;
+  const cardBg     = darkMode ? '#1e1e1e' : '#fff';
+  const border     = darkMode ? '#2a2a2a' : '#e8eaf0';
+  const commentBg  = darkMode ? '#2a2a2a' : '#f5f7fa';
   const isPortrait = imgSize.h > imgSize.w * 1.1;
-  const MAX_CHARS = 500;
 
-  // ---- Like (optimistic) ------------------------------------------------
+  // ── Like (optimistic) ───────────────────────────────────────────────────
   const handleLike = useCallback(async () => {
     if (liking) return;
     setLiking(true);
@@ -71,7 +71,7 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     finally { setLiking(false); }
   }, [liking, post, onUpdate, user]);
 
-  // ---- Comment (optimistic) ---------------------------------------------
+  // ── Comment (optimistic) ────────────────────────────────────────────────
   const handleComment = useCallback(async () => {
     if (!comment.trim()) return;
     const text = comment.trim();
@@ -89,16 +89,16 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     } catch { onUpdate(post); }
   }, [comment, post, onUpdate, user]);
 
-  // ---- Delete -----------------------------------------------------------
+  // ── Delete ──────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     setMenuAnchor(null);
     try {
       await api.delete(`/api/posts/${post._id}`);
-      onDelete(post._id); // remove from local list immediately
+      onDelete(post._id);
     } catch { alert('Failed to delete post'); }
   };
 
-  // ---- Edit -------------------------------------------------------------
+  // ── Edit ────────────────────────────────────────────────────────────────
   const handleSaveEdit = async () => {
     if (!editText.trim() || editText === post.text) { setEditing(false); return; }
     setSaving(true);
@@ -110,7 +110,7 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     finally { setSaving(false); }
   };
 
-  // ---- Follow -----------------------------------------------------------
+  // ── Follow (optimistic) ─────────────────────────────────────────────────
   const handleFollow = async () => {
     if (followLoading || isOwner) return;
     setFollowLoading(true);
@@ -121,7 +121,7 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     finally { setFollowLoading(false); }
   };
 
-  // ---- Share ------------------------------------------------------------
+  // ── Share ────────────────────────────────────────────────────────────────
   const handleShare = () =>
     navigator.clipboard.writeText(window.location.origin + '/?post=' + post._id)
       .then(() => setCopied(true));
@@ -130,7 +130,7 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     const d = new Date(date);
     return isMobile
       ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   const actions = [
@@ -145,18 +145,17 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
         <CardContent sx={{ pb: 1, px: { xs: 1.5, sm: 2 }, pt: { xs: 1.5, sm: 2 } }}>
           <Box display="flex" alignItems="flex-start" justifyContent="space-between">
             <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 1.5 }}>
-              <Avatar sx={{ width: { xs: 38, sm: 44 }, height: { xs: 38, sm: 44 }, bgcolor: '#1976d2', fontWeight: 800, fontSize: { xs: 15, sm: 17 }, boxShadow: '0 2px 8px rgba(25,118,210,0.25)' }}>
+              <Avatar sx={{ width: { xs: 38, sm: 44 }, height: { xs: 38, sm: 44 }, bgcolor: '#1976d2', fontWeight: 800, fontSize: { xs: 15, sm: 17 } }}>
                 {post.username?.[0]?.toUpperCase()}
               </Avatar>
               <Box>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: { xs: 13, sm: 15 }, lineHeight: 1.3 }}>{post.username}</Typography>
-                <Typography variant="caption" color="primary" fontWeight={600} display="block" sx={{ fontSize: { xs: 11, sm: 12 } }}>@{post.username}</Typography>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: { xs: 13, sm: 15 } }}>{post.username}</Typography>
+                <Typography variant="caption" color="primary" fontWeight={600} display="block">@{post.username}</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: 10, sm: 11 } }}>{formatTime(post.createdAt)}</Typography>
               </Box>
             </Box>
 
             <Box display="flex" alignItems="center" gap={0.5}>
-              {/* Follow / Owner menu */}
               {!isOwner ? (
                 <Chip
                   label={following ? 'Following' : 'Follow'}
@@ -181,18 +180,16 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
             </Box>
           </Box>
 
-          {/* Post text or edit field */}
+          {/* Post text or edit */}
           {editing ? (
             <Box mt={1.5}>
-              <TextField
-                fullWidth multiline minRows={2} maxRows={8}
-                value={editText}
-                onChange={e => setEditText(e.target.value.slice(0, MAX_CHARS))}
+              <TextField fullWidth multiline minRows={2} maxRows={8} value={editText}
+                onChange={e => setEditText(e.target.value.slice(0, MAX_POST))}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, fontSize: 14, bgcolor: commentBg } }}
               />
               <Box display="flex" justifyContent="space-between" alignItems="center" mt={0.5}>
-                <Typography variant="caption" color={editText.length > MAX_CHARS - 50 ? 'error' : 'text.secondary'}>
-                  {MAX_CHARS - editText.length} chars left
+                <Typography variant="caption" color={editText.length > MAX_POST - 50 ? 'error' : 'text.secondary'}>
+                  {MAX_POST - editText.length} chars left
                 </Typography>
                 <Box display="flex" gap={1}>
                   <IconButton size="small" onClick={() => setEditing(false)}><CloseIcon fontSize="small" /></IconButton>
@@ -207,13 +204,12 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
           ) : null}
         </CardContent>
 
-        {/* Image with lightbox */}
+        {/* Image */}
         {post.imageUrl && (
           <Box sx={{ width: '100%', bgcolor: darkMode ? '#111' : '#f0f0f0', display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
             <Box component="img" src={post.imageUrl} alt="post"
               onLoad={e => setImgSize({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
-              onClick={() => setLightbox(true)}
-              sx={{ width: '100%', maxHeight: isPortrait ? '85vh' : { xs: 300, sm: 500 }, objectFit: isPortrait ? 'contain' : 'cover', cursor: 'zoom-in', display: 'block' }}
+              sx={{ width: '100%', maxHeight: isPortrait ? '85vh' : { xs: 300, sm: 500 }, objectFit: isPortrait ? 'contain' : 'cover', display: 'block' }}
             />
           </Box>
         )}
@@ -221,11 +217,11 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
         <CardContent sx={{ pt: 1, pb: '10px !important', px: { xs: 1.5, sm: 2 } }}>
           {(post.likes?.length > 0 || post.comments?.length > 0) && (
             <Box display="flex" justifyContent="space-between" mb={0.8}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: 11, sm: 12 } }}>
+              <Typography variant="caption" color="text.secondary">
                 {post.likes?.length > 0 && `❤️ ${post.likes.length} ${post.likes.length === 1 ? 'like' : 'likes'}`}
               </Typography>
               <Typography variant="caption" color="text.secondary"
-                sx={{ cursor: 'pointer', fontSize: { xs: 11, sm: 12 }, '&:hover': { color: '#1976d2' } }}
+                sx={{ cursor: 'pointer', '&:hover': { color: '#1976d2' } }}
                 onClick={() => setShowComments(s => !s)}>
                 {post.comments?.length > 0 && `${post.comments.length} ${post.comments.length === 1 ? 'comment' : 'comments'}`}
               </Typography>
@@ -258,12 +254,10 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
               ))}
               {user && (
                 <Box>
-                  {/* Emoji picker */}
                   {showEmoji && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1, p: 1, bgcolor: commentBg, borderRadius: 2, maxWidth: 280 }}>
                       {EMOJIS.map(e => (
-                        <Typography key={e} component="span"
-                          onClick={() => setComment(c => c + e)}
+                        <Typography key={e} component="span" onClick={() => setComment(c => c + e)}
                           sx={{ fontSize: 20, cursor: 'pointer', lineHeight: 1.4, '&:hover': { transform: 'scale(1.3)' }, transition: 'transform 0.1s' }}>
                           {e}
                         </Typography>
@@ -276,7 +270,7 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
                     </Avatar>
                     <Box flex={1} position="relative">
                       <TextField size="small" value={comment}
-                        onChange={e => setComment(e.target.value.slice(0, 200))}
+                        onChange={e => setComment(e.target.value.slice(0, MAX_COMMENT))}
                         placeholder="Write a comment..."
                         fullWidth
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleComment()}
@@ -291,8 +285,8 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
                         }}
                       />
                       {comment.length > 150 && (
-                        <Typography variant="caption" sx={{ position: 'absolute', bottom: -18, right: 0, color: comment.length >= 200 ? 'error.main' : 'text.secondary', fontSize: 10 }}>
-                          {200 - comment.length} left
+                        <Typography variant="caption" sx={{ position: 'absolute', bottom: -18, right: 0, color: comment.length >= MAX_COMMENT ? 'error.main' : 'text.secondary', fontSize: 10 }}>
+                          {MAX_COMMENT - comment.length} left
                         </Typography>
                       )}
                     </Box>
@@ -308,7 +302,7 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
         </CardContent>
       </Card>
 
-      {/* 3-dot menu (own posts only) */}
+      {/* 3-dot menu — own posts only */}
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}
         PaperProps={{ sx: { borderRadius: 2, minWidth: 140, bgcolor: darkMode ? '#1e1e1e' : '#fff', border: '1px solid', borderColor: darkMode ? '#2a2a2a' : '#e8eaf0' } }}>
         <MenuItem onClick={() => { setEditing(true); setEditText(post.text || ''); setMenuAnchor(null); }}>
@@ -320,21 +314,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
           <Typography variant="body2" fontWeight={600}>Delete</Typography>
         </MenuItem>
       </Menu>
-
-      {/* Image Lightbox */}
-      <Dialog open={lightbox} onClose={() => setLightbox(false)} maxWidth={false}
-        PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.95)', boxShadow: 'none', borderRadius: 0, m: 0 } }}
-        sx={{ '& .MuiDialog-container': { alignItems: 'center' } }}>
-        <Box position="relative">
-          <IconButton onClick={() => setLightbox(false)}
-            sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', color: '#fff', zIndex: 1, '&:hover': { bgcolor: 'rgba(0,0,0,0.9)' } }}>
-            <CloseIcon />
-          </IconButton>
-          <Box component="img" src={post.imageUrl} alt="fullscreen"
-            sx={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', display: 'block' }}
-          />
-        </Box>
-      </Dialog>
 
       <Snackbar open={copied} autoHideDuration={2000} onClose={() => setCopied(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert severity="success" sx={{ borderRadius: 2 }}>🔗 Link copied!</Alert>

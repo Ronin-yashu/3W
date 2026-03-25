@@ -1,6 +1,5 @@
 /**
- * @file posts.js
- * @description Post routes with delete, edit, like, comment + WebSocket broadcasts.
+ * posts.js — CRUD + like/comment + delete/edit + WebSocket broadcasts
  */
 import express from 'express';
 import multer from 'multer';
@@ -27,7 +26,7 @@ router.get('/', async (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to fetch posts' }); }
 });
 
-/** POST /api/posts — create with optional image */
+/** POST /api/posts — create */
 router.post('/', protect, upload.single('image'), async (req, res) => {
   try {
     let imageUrl;
@@ -44,7 +43,7 @@ router.post('/', protect, upload.single('image'), async (req, res) => {
       userId: req.user.id, username: req.user.username,
       text: req.body.text, imageUrl
     });
-    io.emit('post:new', post); // broadcast new post to all clients
+    io.emit('post:new', post);
     res.status(201).json(post);
   } catch { res.status(500).json({ error: 'Failed to create post' }); }
 });
@@ -54,8 +53,7 @@ router.patch('/:id', protect, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Not found' });
-    if (post.userId.toString() !== req.user.id)
-      return res.status(403).json({ error: 'Not your post' });
+    if (post.userId.toString() !== req.user.id) return res.status(403).json({ error: 'Not your post' });
     post.text = req.body.text?.slice(0, 500) ?? post.text;
     await post.save();
     io.emit('post:updated', post);
@@ -68,15 +66,14 @@ router.delete('/:id', protect, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Not found' });
-    if (post.userId.toString() !== req.user.id)
-      return res.status(403).json({ error: 'Not your post' });
+    if (post.userId.toString() !== req.user.id) return res.status(403).json({ error: 'Not your post' });
     await post.deleteOne();
-    io.emit('post:deleted', req.params.id); // broadcast deletion
+    io.emit('post:deleted', req.params.id);
     res.json({ success: true });
   } catch { res.status(500).json({ error: 'Delete failed' }); }
 });
 
-/** POST /api/posts/:id/like — toggle like */
+/** POST /api/posts/:id/like — toggle */
 router.post('/:id/like', protect, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -90,7 +87,7 @@ router.post('/:id/like', protect, async (req, res) => {
   } catch { res.status(500).json({ error: 'Like failed' }); }
 });
 
-/** POST /api/posts/:id/comment — add comment */
+/** POST /api/posts/:id/comment — add */
 router.post('/:id/comment', protect, async (req, res) => {
   try {
     const { text } = req.body;
