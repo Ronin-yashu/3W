@@ -20,11 +20,20 @@ export default function PostCard({ post, onUpdate, darkMode }) {
   const [showComments, setShowComments] = useState(false);
   const [copied, setCopied] = useState(false);
   const [liking, setLiking] = useState(false);
+  // Track natural image dimensions to decide objectFit
+  const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
   const isLiked = post.likes?.some(l => l.userId === user?.userId);
 
   const cardBg = darkMode ? '#1e1e1e' : '#fff';
   const border = darkMode ? '#2a2a2a' : '#e8eaf0';
   const commentBg = darkMode ? '#2a2a2a' : '#f5f7fa';
+
+  // Portrait (tall) images get contain so nothing is cropped
+  // Landscape / square images get cover for a clean fill
+  const isPortrait = imgSize.h > imgSize.w * 1.1;
+  const objectFit = isPortrait ? 'contain' : 'cover';
+  // Portrait images: show full height (capped at 85vh), landscape: cap at 500px
+  const maxHeight = isPortrait ? '85vh' : { xs: 300, sm: 500 };
 
   const handleLike = async () => {
     if (liking) return;
@@ -54,10 +63,10 @@ export default function PostCard({ post, onUpdate, darkMode }) {
       + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // ✅ FIXED: stable action config — key is always a fixed string, never changes on resize
+  // Stable action config — id never changes so React never remounts on resize
   const actions = [
     {
-      id: 'like',   // stable key — does NOT depend on isMobile
+      id: 'like',
       label: 'Like',
       icon: isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />,
       color: isLiked ? '#e53935' : 'text.secondary',
@@ -125,9 +134,31 @@ export default function PostCard({ post, onUpdate, darkMode }) {
         )}
       </CardContent>
 
+      {/* Image — full visibility, smart fit based on aspect ratio */}
       {post.imageUrl && (
-        <CardMedia component="img" image={post.imageUrl}
-          sx={{ maxHeight: { xs: 260, sm: 400 }, objectFit: 'cover', cursor: 'pointer' }} />
+        <Box sx={{
+          width: '100%',
+          bgcolor: darkMode ? '#111' : '#f0f0f0',  // letterbox bg for portrait images
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          overflow: 'hidden',
+        }}>
+          <Box
+            component="img"
+            src={post.imageUrl}
+            alt="post image"
+            onLoad={(e) => setImgSize({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
+            sx={{
+              width: '100%',
+              maxHeight,
+              objectFit,
+              objectPosition: 'center',
+              display: 'block',
+              cursor: 'pointer',
+            }}
+          />
+        </Box>
       )}
 
       <CardContent sx={{ pt: 1, pb: '10px !important', px: { xs: 1.5, sm: 2 } }}>
@@ -146,7 +177,7 @@ export default function PostCard({ post, onUpdate, darkMode }) {
 
         <Divider sx={{ mb: 0.5, borderColor: border }} />
 
-        {/* Action Row — keys are stable 'like'|'comment'|'share', never change on resize */}
+        {/* Action Row */}
         <Box display="flex" alignItems="center" justifyContent="space-around" pt={0.5}>
           {actions.map(({ id, label, icon, color, hoverBg, onClick }) => (
             <Box
@@ -162,7 +193,6 @@ export default function PostCard({ post, onUpdate, darkMode }) {
               }}
             >
               {icon}
-              {/* Label only shows on desktop — toggling this does NOT remount the box */}
               {!isMobile && (
                 <Typography variant="body2" fontWeight={600} fontSize={13}>{label}</Typography>
               )}
