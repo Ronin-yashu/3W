@@ -13,11 +13,11 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import postRoutes from './routes/posts.js';
+import userRoutes from './routes/users.js';
 
 const app = express();
 const httpServer = createServer(app);
 
-// Socket.io — broadcast likes/comments in real-time to all connected clients
 export const io = new Server(httpServer, {
   cors: { origin: 'http://localhost:5173', credentials: true }
 });
@@ -37,5 +37,6 @@ mongoose.connect(process.env.MONGO_URI, { family: 4 })
 
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/users', userRoutes);
 
 httpServer.listen(5000, () => console.log('Server running on 5000 ✅'));
