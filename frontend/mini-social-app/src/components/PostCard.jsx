@@ -1,3 +1,8 @@
+/**
+ * @file PostCard.jsx
+ * @description Individual post card with optimistic like/comment updates.
+ * Likes and comments update the UI instantly before the API call completes.
+ */
 import {
   Card, CardContent, CardMedia, Typography, IconButton,
   Box, TextField, Avatar, Collapse, Divider, Snackbar, Alert,
@@ -20,7 +25,6 @@ export default function PostCard({ post, onUpdate, darkMode }) {
   const [showComments, setShowComments] = useState(false);
   const [copied, setCopied] = useState(false);
   const [liking, setLiking] = useState(false);
-  // Track natural image dimensions to decide objectFit
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
   const isLiked = post.likes?.some(l => l.userId === user?.userId);
 
@@ -28,24 +32,66 @@ export default function PostCard({ post, onUpdate, darkMode }) {
   const border = darkMode ? '#2a2a2a' : '#e8eaf0';
   const commentBg = darkMode ? '#2a2a2a' : '#f5f7fa';
 
-  // Portrait (tall) images get contain so nothing is cropped
-  // Landscape / square images get cover for a clean fill
   const isPortrait = imgSize.h > imgSize.w * 1.1;
   const objectFit = isPortrait ? 'contain' : 'cover';
-  // Portrait images: show full height (capped at 85vh), landscape: cap at 500px
   const maxHeight = isPortrait ? '85vh' : { xs: 300, sm: 500 };
 
+  /**
+   * Optimistic like — updates UI immediately, then syncs with server.
+   * If server fails, rolls back to previous state.
+   */
   const handleLike = async () => {
     if (liking) return;
     setLiking(true);
-    try { const { data } = await api.post(`/api/posts/${post._id}/like`); onUpdate(data); }
-    finally { setLiking(false); }
+
+    // --- Optimistic update ---
+    const wasLiked = post.likes?.some(l => l.userId === user?.userId);
+    const optimisticPost = {
+      ...post,
+      likes: wasLiked
+        ? post.likes.filter(l => l.userId !== user?.userId)          // unlike
+        : [...post.likes, { userId: user?.userId, username: user?.username }] // like
+    };
+    onUpdate(optimisticPost); // instant UI
+
+    try {
+      const { data } = await api.post(`/api/posts/${post._id}/like`);
+      onUpdate(data); // sync with real server data
+    } catch {
+      onUpdate(post); // rollback on error
+    } finally {
+      setLiking(false);
+    }
   };
 
+  /**
+   * Optimistic comment — appends comment to UI instantly.
+   */
   const handleComment = async () => {
     if (!comment.trim()) return;
-    const { data } = await api.post(`/api/posts/${post._id}/comment`, { text: comment });
-    onUpdate(data); setComment(''); setShowComments(true);
+    const text = comment.trim();
+    setComment(''); // clear input immediately
+
+    // --- Optimistic update ---
+    const optimisticComment = {
+      userId: user?.userId,
+      username: user?.username,
+      text,
+      createdAt: new Date().toISOString()
+    };
+    const optimisticPost = {
+      ...post,
+      comments: [...(post.comments || []), optimisticComment]
+    };
+    onUpdate(optimisticPost);
+    setShowComments(true);
+
+    try {
+      const { data } = await api.post(`/api/posts/${post._id}/comment`, { text });
+      onUpdate(data); // sync with server (gets proper _id etc.)
+    } catch {
+      onUpdate(post); // rollback
+    }
   };
 
   const handleShare = () => {
@@ -63,7 +109,7 @@ export default function PostCard({ post, onUpdate, darkMode }) {
       + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Stable action config — id never changes so React never remounts on resize
+  // Stable keys so React never remounts on resize
   const actions = [
     {
       id: 'like',
@@ -134,29 +180,15 @@ export default function PostCard({ post, onUpdate, darkMode }) {
         )}
       </CardContent>
 
-      {/* Image — full visibility, smart fit based on aspect ratio */}
       {post.imageUrl && (
         <Box sx={{
           width: '100%',
-          bgcolor: darkMode ? '#111' : '#f0f0f0',  // letterbox bg for portrait images
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          overflow: 'hidden',
+          bgcolor: darkMode ? '#111' : '#f0f0f0',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden'
         }}>
-          <Box
-            component="img"
-            src={post.imageUrl}
-            alt="post image"
+          <Box component="img" src={post.imageUrl} alt="post image"
             onLoad={(e) => setImgSize({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
-            sx={{
-              width: '100%',
-              maxHeight,
-              objectFit,
-              objectPosition: 'center',
-              display: 'block',
-              cursor: 'pointer',
-            }}
+            sx={{ width: '100%', maxHeight, objectFit, objectPosition: 'center', display: 'block', cursor: 'pointer' }}
           />
         </Box>
       )}
@@ -177,21 +209,15 @@ export default function PostCard({ post, onUpdate, darkMode }) {
 
         <Divider sx={{ mb: 0.5, borderColor: border }} />
 
-        {/* Action Row */}
         <Box display="flex" alignItems="center" justifyContent="space-around" pt={0.5}>
           {actions.map(({ id, label, icon, color, hoverBg, onClick }) => (
-            <Box
-              key={id}
-              onClick={onClick}
-              display="flex"
-              alignItems="center"
+            <Box key={id} onClick={onClick} display="flex" alignItems="center"
               gap={isMobile ? 0 : 0.8}
               sx={{
                 cursor: 'pointer', color, px: { xs: 1.5, sm: 2 }, py: { xs: 1, sm: 0.8 },
                 borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, justifyContent: 'center',
                 '&:hover': { bgcolor: hoverBg }, transition: 'all 0.15s'
-              }}
-            >
+              }}>
               {icon}
               {!isMobile && (
                 <Typography variant="body2" fontWeight={600} fontSize={13}>{label}</Typography>
@@ -200,11 +226,10 @@ export default function PostCard({ post, onUpdate, darkMode }) {
           ))}
         </Box>
 
-        {/* Comments Section */}
         <Collapse in={showComments}>
           <Box mt={1.5} pt={1.5} sx={{ borderTop: '1px solid', borderColor: border }}>
             {post.comments?.map((c, i) => (
-              <Box key={i} display="flex" gap={1} mb={1.2} alignItems="flex-start">
+              <Box key={c._id || i} display="flex" gap={1} mb={1.2} alignItems="flex-start">
                 <Avatar sx={{ width: { xs: 28, sm: 32 }, height: { xs: 28, sm: 32 }, bgcolor: '#1976d2', fontSize: 11, fontWeight: 700 }}>
                   {c.username?.[0]?.toUpperCase()}
                 </Avatar>

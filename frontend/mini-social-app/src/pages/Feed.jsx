@@ -1,13 +1,13 @@
 /**
  * @file Feed.jsx
- * @description Main feed page — shows paginated posts with infinite scroll,
- * create-post box, filter tabs, search, and notifications.
+ * @description Main feed page with real-time updates via background polling.
  */
 import { useEffect, useState, useMemo } from 'react';
 import {
   Box, Typography, AppBar, Toolbar, Container, Tabs, Tab, Fab,
   BottomNavigation, BottomNavigationAction, InputAdornment, IconButton,
-  Paper, Snackbar, Alert, Badge, useMediaQuery, useTheme, Button, TextField
+  Paper, Snackbar, Alert, Badge, useMediaQuery, useTheme, Button, TextField,
+  Collapse
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SearchIcon from '@mui/icons-material/Search';
@@ -18,6 +18,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { usePosts } from '../hooks/usePosts';
@@ -28,7 +29,6 @@ import InfiniteScrollTrigger from '../components/InfiniteScrollTrigger';
 import NotificationDrawer from '../components/NotificationDrawer';
 import EmptyState from '../components/EmptyState';
 
-/** Feed filter tab labels */
 const FILTERS = ['All Posts', 'Most Liked', 'Most Commented'];
 
 export default function Feed({ darkMode, setDarkMode }) {
@@ -37,13 +37,13 @@ export default function Feed({ darkMode, setDarkMode }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Post state via custom hook
-  const { posts, loading, loadingMore, hasMore, fetchPosts, loadMore, updatePost, prependPost } = usePosts();
+  const {
+    posts, loading, loadingMore, hasMore, newPostCount,
+    fetchPosts, loadMore, updatePost, prependPost, refreshFeed
+  } = usePosts();
 
-  // Derived notifications via custom hook
   const notifications = useNotifications(posts, user?.username);
 
-  // UI state
   const [tab, setTab] = useState(0);
   const [bottomNav, setBottomNav] = useState(0);
   const [search, setSearch] = useState('');
@@ -51,10 +51,8 @@ export default function Feed({ darkMode, setDarkMode }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [snack, setSnack] = useState({ open: false, msg: '', severity: 'success' });
 
-  // Fetch posts on mount
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
-  /** Handles successful post creation from CreatePostBox */
   const handlePostCreated = (newPost) => {
     prependPost(newPost);
     setSnack({ open: true, msg: 'Posted! 🎉', severity: 'success' });
@@ -62,10 +60,6 @@ export default function Feed({ darkMode, setDarkMode }) {
 
   const handleLogout = async () => { await logout(); navigate('/login', { replace: true }); };
 
-  /**
-   * Client-side filtering and sorting.
-   * Search filters by username/text; tabs sort by likes or comments.
-   */
   const filteredPosts = useMemo(() => {
     let result = [...posts];
     if (search.trim()) {
@@ -86,7 +80,7 @@ export default function Feed({ darkMode, setDarkMode }) {
 
   return (
     <Box bgcolor={bg} minHeight="100vh" pb={isMobile ? 8 : 4}>
-      {/* ───── AppBar ───── */}
+      {/* AppBar */}
       <AppBar position="sticky" elevation={0}
         sx={{ bgcolor: cardBg, borderBottom: '1px solid', borderColor: border }}>
         <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 1.5, sm: 2 }, minHeight: { xs: 56, sm: 64 } }}>
@@ -94,7 +88,6 @@ export default function Feed({ darkMode, setDarkMode }) {
             Social
           </Typography>
           <Box display="flex" alignItems="center" gap={{ xs: 0.5, sm: 1 }}>
-            {/* Desktop search */}
             {!isMobile && (
               <TextField placeholder="Search posts, users..." size="small" value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -102,19 +95,16 @@ export default function Feed({ darkMode, setDarkMode }) {
                 InputProps={{ endAdornment: <InputAdornment position="end"><SearchIcon sx={{ color: '#1976d2' }} fontSize="small" /></InputAdornment> }}
               />
             )}
-            {/* Mobile search icon */}
             {isMobile && (
               <IconButton size="small" onClick={() => setSearchOpen(true)} sx={{ color: darkMode ? '#fff' : '#555' }}>
                 <SearchIcon />
               </IconButton>
             )}
-            {/* Dark mode toggle */}
             <IconButton size="small" onClick={() => setDarkMode(!darkMode)}>
               {darkMode
                 ? <LightModeOutlinedIcon sx={{ color: '#ffd54f', fontSize: 22 }} />
                 : <DarkModeOutlinedIcon sx={{ color: '#555', fontSize: 22 }} />}
             </IconButton>
-            {/* Bell — desktop only */}
             {!isMobile && (
               <IconButton size="small" onClick={() => setNotifOpen(true)}>
                 <Badge badgeContent={notifications.length} color="error" max={9}>
@@ -122,23 +112,17 @@ export default function Feed({ darkMode, setDarkMode }) {
                 </Badge>
               </IconButton>
             )}
-            {/* Avatar */}
-            <Box
-              component="button"
-              onClick={() => navigate('/profile')}
+            <Box component="button" onClick={() => navigate('/profile')}
               sx={{
                 width: { xs: 32, sm: 36 }, height: { xs: 32, sm: 36 },
                 borderRadius: '50%', bgcolor: '#1976d2', color: '#fff',
                 border: 'none', cursor: 'pointer', fontWeight: 800,
                 fontSize: { xs: 13, sm: 15 }, display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
-            >
+              }}>
               {user?.username?.[0]?.toUpperCase()}
             </Box>
           </Box>
         </Toolbar>
-
-        {/* Mobile expandable search bar */}
         {isMobile && searchOpen && (
           <Box px={2} pb={1.5} sx={{ bgcolor: cardBg }}>
             <TextField autoFocus placeholder="Search posts, users..." fullWidth size="small"
@@ -158,18 +142,30 @@ export default function Feed({ darkMode, setDarkMode }) {
         )}
       </AppBar>
 
-      {/* ───── Notification Drawer ───── */}
-      <NotificationDrawer
-        open={notifOpen}
-        onClose={() => setNotifOpen(false)}
-        notifications={notifications}
-        darkMode={darkMode}
-      />
+      <NotificationDrawer open={notifOpen} onClose={() => setNotifOpen(false)}
+        notifications={notifications} darkMode={darkMode} />
 
-      {/* ───── Main Content ───── */}
       <Container maxWidth="sm" sx={{ pt: { xs: 1.5, sm: 2 }, px: { xs: 1, sm: 2 } }}>
-        {/* Create Post */}
         <CreatePostBox onPost={handlePostCreated} darkMode={darkMode} />
+
+        {/* ✨ New posts banner — appears when background poll detects new posts */}
+        <Collapse in={newPostCount > 0}>
+          <Box
+            onClick={refreshFeed}
+            sx={{
+              mb: 2, py: 1.2, px: 2,
+              bgcolor: '#1976d2', borderRadius: 5,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+              cursor: 'pointer', boxShadow: '0 4px 14px rgba(25,118,210,0.35)',
+              '&:hover': { bgcolor: '#1565c0' }, transition: 'bgcolor 0.2s'
+            }}
+          >
+            <KeyboardArrowUpIcon sx={{ color: '#fff', fontSize: 20 }} />
+            <Typography variant="body2" fontWeight={700} color="#fff">
+              {newPostCount} new post{newPostCount > 1 ? 's' : ''} — tap to refresh
+            </Typography>
+          </Box>
+        </Collapse>
 
         {/* Filter Tabs */}
         <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: border, bgcolor: cardBg, mb: 2 }}>
@@ -189,9 +185,8 @@ export default function Feed({ darkMode, setDarkMode }) {
           </Tabs>
         </Paper>
 
-        {/* Posts list */}
+        {/* Posts */}
         {loading ? (
-          // Skeleton-style loading cards
           Array.from({ length: 3 }).map((_, i) => (
             <Paper key={i} elevation={0} sx={{
               borderRadius: 3, border: '1px solid', borderColor: border,
@@ -215,26 +210,19 @@ export default function Feed({ darkMode, setDarkMode }) {
             {filteredPosts.map(post =>
               <PostCard key={post._id} post={post} onUpdate={updatePost} darkMode={darkMode} />
             )}
-            {/* Infinite scroll trigger — only when not searching/sorting */}
             {tab === 0 && !search && (
-              <InfiniteScrollTrigger
-                onIntersect={loadMore}
-                hasMore={hasMore}
-                loading={loadingMore}
-              />
+              <InfiniteScrollTrigger onIntersect={loadMore} hasMore={hasMore} loading={loadingMore} />
             )}
           </>
         )}
       </Container>
 
-      {/* ───── FAB ───── */}
       <Fab color="primary"
         sx={{ position: 'fixed', bottom: { xs: 72, sm: 24 }, right: { xs: 16, sm: 24 }, boxShadow: '0 4px 16px rgba(25,118,210,0.4)' }}
         onClick={() => navigate('/create')}>
         <AddIcon />
       </Fab>
 
-      {/* ───── Mobile Bottom Nav ───── */}
       {isMobile && (
         <Paper elevation={4} sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200 }}>
           <BottomNavigation value={bottomNav} sx={{ bgcolor: '#1976d2', height: 60 }}>
@@ -254,7 +242,6 @@ export default function Feed({ darkMode, setDarkMode }) {
         </Paper>
       )}
 
-      {/* Desktop logout */}
       {!isMobile && (
         <Box sx={{ position: 'fixed', bottom: 24, left: 24 }}>
           <Button variant="outlined" startIcon={<LogoutIcon />} onClick={handleLogout} size="small"
@@ -264,7 +251,6 @@ export default function Feed({ darkMode, setDarkMode }) {
         </Box>
       )}
 
-      {/* Toast */}
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack({ ...snack, open: false })}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity={snack.severity} sx={{ borderRadius: 2 }}>{snack.msg}</Alert>
