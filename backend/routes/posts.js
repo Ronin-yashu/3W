@@ -1,68 +1,48 @@
 /**
  * @file posts.js
- * @description Post routes — CRUD, like/unlike toggle, comments, cursor-based pagination
+ * @description Post routes — CRUD, like/unlike toggle, comments, cursor-based pagination.
+ * Emits WebSocket events for like and comment so all clients update in real-time.
  */
 import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import Post from '../models/Post.js';
 import { protect } from '../middleware/auth.js';
+import { io } from '../index.js';
 
 const router = express.Router();
-
-// Store uploaded images in memory before sending to Cloudinary
 const upload = multer({ storage: multer.memoryStorage() });
 
 /**
  * GET /api/posts
- * Returns paginated posts (newest first).
- * Supports cursor-based pagination via `?cursor=<lastPostId>&limit=<n>`
- * Also supports `?sort=likes|comments` for filtered feeds.
+ * Cursor-based paginated posts (newest first).
  */
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 10, 50); // max 50 per page
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const { cursor, sort } = req.query;
-
-    // Build query — if cursor provided, fetch posts older than that ID
     const query = cursor ? { _id: { $lt: cursor } } : {};
 
-    let posts = await Post.find(query)
-      .sort({ _id: -1 }) // newest first
-      .limit(limit + 1)  // fetch one extra to check if more pages exist
-      .lean();            // plain JS objects — faster than Mongoose docs
-
-    // Determine if there are more posts beyond this page
+    let posts = await Post.find(query).sort({ _id: -1 }).limit(limit + 1).lean();
     const hasMore = posts.length > limit;
-    if (hasMore) posts.pop(); // remove the extra item
+    if (hasMore) posts.pop();
 
-    // Client-side sort options (likes / comments)
-    if (sort === 'likes') {
-      posts.sort((a, b) => b.likes.length - a.likes.length);
-    } else if (sort === 'comments') {
-      posts.sort((a, b) => b.comments.length - a.comments.length);
-    }
+    if (sort === 'likes') posts.sort((a, b) => b.likes.length - a.likes.length);
+    else if (sort === 'comments') posts.sort((a, b) => b.comments.length - a.comments.length);
 
-    res.json({
-      posts,
-      hasMore,
-      nextCursor: hasMore ? posts[posts.length - 1]._id : null
-    });
-  } catch (err) {
+    res.json({ posts, hasMore, nextCursor: hasMore ? posts[posts.length - 1]._id : null });
+  } catch {
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 });
 
 /**
  * POST /api/posts
- * Creates a new post. Supports optional image upload via Cloudinary.
- * Requires JWT authentication.
+ * Create a new post with optional image upload.
  */
 router.post('/', protect, upload.single('image'), async (req, res) => {
   try {
     let imageUrl;
-
-    // Upload image to Cloudinary if provided
     if (req.file) {
       const b64 = Buffer.from(req.file.buffer).toString('base64');
       const dataURI = `data:${req.file.mimetype};base64,${b64}`;
@@ -72,23 +52,21 @@ router.post('/', protect, upload.single('image'), async (req, res) => {
       });
       imageUrl = result.secure_url;
     }
-
     const post = await Post.create({
       userId: req.user.id,
       username: req.user.username,
       text: req.body.text,
       imageUrl
     });
-
     res.status(201).json(post);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to create post' });
   }
 });
 
 /**
  * POST /api/posts/:id/like
- * Toggles like/unlike on a post for the authenticated user.
+ * Toggle like/unlike. Emits 'post:updated' via WebSocket to all clients.
  */
 router.post('/:id/like', protect, async (req, res) => {
   try {
@@ -96,25 +74,24 @@ router.post('/:id/like', protect, async (req, res) => {
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
     const alreadyLiked = post.likes.some(l => l.userId.toString() === req.user.id);
-
     if (alreadyLiked) {
-      // Unlike
       post.likes = post.likes.filter(l => l.userId.toString() !== req.user.id);
     } else {
-      // Like
       post.likes.push({ userId: req.user.id, username: req.user.username });
     }
-
     await post.save();
+
+    // Broadcast to ALL connected clients — they update the post in-place
+    io.emit('post:updated', post);
     res.json(post);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to update like' });
   }
 });
 
 /**
  * POST /api/posts/:id/comment
- * Adds a comment to a post.
+ * Add a comment. Emits 'post:updated' via WebSocket to all clients.
  */
 router.post('/:id/comment', protect, async (req, res) => {
   try {
@@ -124,15 +101,13 @@ router.post('/:id/comment', protect, async (req, res) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
-    post.comments.push({
-      userId: req.user.id,
-      username: req.user.username,
-      text: text.trim()
-    });
-
+    post.comments.push({ userId: req.user.id, username: req.user.username, text: text.trim() });
     await post.save();
+
+    // Broadcast updated post to all connected clients
+    io.emit('post:updated', post);
     res.json(post);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to add comment' });
   }
 });

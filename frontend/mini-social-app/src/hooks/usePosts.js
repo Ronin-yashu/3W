@@ -1,27 +1,28 @@
 /**
  * @file usePosts.js
- * @description Custom hook for paginated post fetching with background polling.
- * Polls every 8 seconds to sync new likes/comments from other users.
- * Uses smart merge so existing posts update in-place (no scroll jump).
+ * @description Post fetching with:
+ * - WebSocket listener for real-time like/comment updates (post:updated event)
+ * - Polling only for new posts (every 15s) — stops when tab is hidden
+ * - Optimistic updatePost for instant UI feedback
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import api from '../api/axios';
+import { useSocket } from './useSocket';
 
-const POLL_INTERVAL = 8000; // 8 seconds
+const NEW_POST_POLL_INTERVAL = 15000; // 15 seconds — only checks for new posts
 
 export function usePosts() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [newPostCount, setNewPostCount] = useState(0); // "X new posts" banner
+  const [hasNewPost, setHasNewPost] = useState(false); // true/false banner (not a count)
   const cursorRef = useRef(null);
   const pollingRef = useRef(null);
-  const latestPostIdRef = useRef(null); // track newest post for new-post detection
+  const topPostIdRef = useRef(null); // ID of the newest post we know about
+  const socket = useSocket();
 
-  /**
-   * Fetches first page. Resets all state.
-   */
+  // ── Initial fetch ──────────────────────────────────────────────────────────
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     cursorRef.current = null;
@@ -30,45 +31,61 @@ export function usePosts() {
       setPosts(data.posts);
       setHasMore(data.hasMore);
       cursorRef.current = data.nextCursor;
-      if (data.posts.length > 0) latestPostIdRef.current = data.posts[0]._id;
+      if (data.posts.length > 0) topPostIdRef.current = data.posts[0]._id;
     } catch (err) {
-      console.error('Failed to fetch posts:', err);
+      console.error('fetchPosts failed:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  /**
-   * Background poll — silently re-fetches latest posts and merges:
-   * - Updates existing posts in-place (likes/comments change without scroll jump)
-   * - Detects brand-new posts and shows a "X new posts" banner instead of auto-injecting
-   */
-  const silentRefresh = useCallback(async () => {
+  // ── WebSocket: real-time like/comment updates ──────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+    const handlePostUpdated = (updatedPost) => {
+      // Update the post in-place — zero reload, zero scroll jump
+      setPosts(prev =>
+        prev.map(p => p._id === updatedPost._id ? updatedPost : p)
+      );
+    };
+    socket.on('post:updated', handlePostUpdated);
+    return () => socket.off('post:updated', handlePostUpdated);
+  }, [socket]);
+
+  // ── Polling: only checks for brand-new posts ───────────────────────────────
+  const checkForNewPosts = useCallback(async () => {
+    if (!topPostIdRef.current) return;
     try {
-      const { data } = await api.get('/api/posts?limit=10');
-      const incoming = data.posts;
-
-      setPosts(prev => {
-        const prevIds = new Set(prev.map(p => p._id));
-
-        // Count truly new posts (not yet in our list)
-        const brandNew = incoming.filter(p => !prevIds.has(p._id));
-        if (brandNew.length > 0) {
-          setNewPostCount(c => c + brandNew.length);
-        }
-
-        // Merge: update existing posts with fresh like/comment data
-        const incomingMap = Object.fromEntries(incoming.map(p => [p._id, p]));
-        return prev.map(p => incomingMap[p._id] ? incomingMap[p._id] : p);
-      });
-    } catch (err) {
-      // Silently ignore poll errors — don't disrupt the UI
-    }
+      const { data } = await api.get('/api/posts?limit=1');
+      const latestId = data.posts[0]?._id;
+      // If newest post on server is different from what we have → show banner
+      if (latestId && latestId !== topPostIdRef.current) {
+        setHasNewPost(true);
+      }
+    } catch { /* silent */ }
   }, []);
 
-  /**
-   * Load the next page (infinite scroll).
-   */
+  useEffect(() => {
+    if (loading) return;
+    pollingRef.current = setInterval(checkForNewPosts, NEW_POST_POLL_INTERVAL);
+    return () => clearInterval(pollingRef.current);
+  }, [loading, checkForNewPosts]);
+
+  // Stop polling when tab hidden, resume + immediately check on focus
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        clearInterval(pollingRef.current);
+      } else {
+        checkForNewPosts();
+        pollingRef.current = setInterval(checkForNewPosts, NEW_POST_POLL_INTERVAL);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [checkForNewPosts]);
+
+  // ── Load more (infinite scroll) ────────────────────────────────────────────
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !cursorRef.current) return;
     setLoadingMore(true);
@@ -78,58 +95,32 @@ export function usePosts() {
       setHasMore(data.hasMore);
       cursorRef.current = data.nextCursor;
     } catch (err) {
-      console.error('Failed to load more:', err);
+      console.error('loadMore failed:', err);
     } finally {
       setLoadingMore(false);
     }
   }, [loadingMore, hasMore]);
 
-  /**
-   * Updates a single post optimistically (immediate UI update after like/comment).
-   */
+  // ── Optimistic update (for the acting user's own like/comment) ─────────────
   const updatePost = useCallback((updatedPost) => {
     setPosts(prev => prev.map(p => p._id === updatedPost._id ? updatedPost : p));
   }, []);
 
-  /**
-   * Prepend a new post to the top and reset the new-post banner.
-   */
+  // ── Prepend own new post immediately ──────────────────────────────────────
   const prependPost = useCallback((newPost) => {
     setPosts(prev => [newPost, ...prev]);
-    latestPostIdRef.current = newPost._id;
+    topPostIdRef.current = newPost._id;
+    setHasNewPost(false);
   }, []);
 
-  /**
-   * Called when user taps "X new posts" banner — reloads feed from top.
-   */
+  // ── Refresh feed when user taps banner ────────────────────────────────────
   const refreshFeed = useCallback(async () => {
-    setNewPostCount(0);
+    setHasNewPost(false);
     await fetchPosts();
   }, [fetchPosts]);
 
-  // Start polling after initial load, stop when component unmounts
-  useEffect(() => {
-    if (loading) return;
-    pollingRef.current = setInterval(silentRefresh, POLL_INTERVAL);
-    return () => clearInterval(pollingRef.current);
-  }, [loading, silentRefresh]);
-
-  // Stop polling when tab is hidden, resume when visible (saves bandwidth)
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.hidden) {
-        clearInterval(pollingRef.current);
-      } else {
-        silentRefresh(); // immediate refresh on tab focus
-        pollingRef.current = setInterval(silentRefresh, POLL_INTERVAL);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [silentRefresh]);
-
   return {
-    posts, loading, loadingMore, hasMore, newPostCount,
+    posts, loading, loadingMore, hasMore, hasNewPost,
     fetchPosts, loadMore, updatePost, prependPost, refreshFeed
   };
 }

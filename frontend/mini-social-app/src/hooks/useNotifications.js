@@ -1,43 +1,56 @@
 /**
  * @file useNotifications.js
- * @description Derives notifications from posts — likes and comments by others on the user's posts.
+ * @description Derives notifications from posts where the current user is the post author
+ * and others have liked or commented. Tracks which notifications have been "seen".
+ * Calling markAllRead() resets the unread count to 0.
  */
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
-/**
- * @typedef {Object} Notification
- * @property {'like'|'comment'} type
- * @property {string} from - username of the actor
- * @property {string} text - post text or comment text
- * @property {string} postId
- */
+export function useNotifications(posts, currentUsername) {
+  const [seenCount, setSeenCount] = useState(0);
 
-/**
- * Derives notifications for the current user from the posts array.
- * @param {Array} posts - all posts
- * @param {string} username - current user's username
- * @returns {Notification[]}
- */
-export function useNotifications(posts, username) {
-  return useMemo(() => {
-    if (!username || !posts.length) return [];
+  // Build full notification list from posts
+  const allNotifications = useMemo(() => {
+    if (!currentUsername || !posts.length) return [];
     const notifs = [];
 
-    posts
-      .filter(p => p.username === username)
-      .forEach(post => {
-        // Likes from others
-        post.likes?.forEach(l => {
-          if (l.username !== username)
-            notifs.push({ type: 'like', from: l.username, text: post.text || 'your post', postId: post._id });
-        });
-        // Comments from others
-        post.comments?.forEach(c => {
-          if (c.username !== username)
-            notifs.push({ type: 'comment', from: c.username, text: c.text, postId: post._id });
-        });
-      });
+    posts.forEach(post => {
+      if (post.username !== currentUsername) return; // only my posts
 
-    return notifs.reverse();
-  }, [posts, username]);
+      // Likes from others
+      post.likes
+        .filter(l => l.username !== currentUsername)
+        .forEach(l => notifs.push({
+          id: `like-${post._id}-${l.username}`,
+          type: 'like',
+          from: l.username,
+          postText: post.text?.slice(0, 40) || 'your post',
+          postId: post._id,
+        }));
+
+      // Comments from others
+      post.comments
+        .filter(c => c.username !== currentUsername)
+        .forEach(c => notifs.push({
+          id: `comment-${post._id}-${c.username}-${c.text?.slice(0, 10)}`,
+          type: 'comment',
+          from: c.username,
+          text: c.text?.slice(0, 60),
+          postText: post.text?.slice(0, 40) || 'your post',
+          postId: post._id,
+        }));
+    });
+
+    return notifs;
+  }, [posts, currentUsername]);
+
+  // Unread = total - how many were seen when drawer was last opened
+  const unreadCount = Math.max(0, allNotifications.length - seenCount);
+
+  // Call this when notification drawer opens — resets unread badge to 0
+  const markAllRead = useCallback(() => {
+    setSeenCount(allNotifications.length);
+  }, [allNotifications.length]);
+
+  return { notifications: allNotifications, unreadCount, markAllRead };
 }

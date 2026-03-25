@@ -1,6 +1,7 @@
 /**
  * @file Feed.jsx
- * @description Main feed page with real-time updates via background polling.
+ * @description Main feed. WebSocket handles live like/comment updates.
+ * Polling only checks for new posts. Notification badge resets on drawer open.
  */
 import { useEffect, useState, useMemo } from 'react';
 import {
@@ -38,11 +39,11 @@ export default function Feed({ darkMode, setDarkMode }) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const {
-    posts, loading, loadingMore, hasMore, newPostCount,
+    posts, loading, loadingMore, hasMore, hasNewPost,
     fetchPosts, loadMore, updatePost, prependPost, refreshFeed
   } = usePosts();
 
-  const notifications = useNotifications(posts, user?.username);
+  const { notifications, unreadCount, markAllRead } = useNotifications(posts, user?.username);
 
   const [tab, setTab] = useState(0);
   const [bottomNav, setBottomNav] = useState(0);
@@ -59,6 +60,11 @@ export default function Feed({ darkMode, setDarkMode }) {
   };
 
   const handleLogout = async () => { await logout(); navigate('/login', { replace: true }); };
+
+  const handleOpenNotif = () => {
+    setNotifOpen(true);
+    setBottomNav(1);
+  };
 
   const filteredPosts = useMemo(() => {
     let result = [...posts];
@@ -106,8 +112,8 @@ export default function Feed({ darkMode, setDarkMode }) {
                 : <DarkModeOutlinedIcon sx={{ color: '#555', fontSize: 22 }} />}
             </IconButton>
             {!isMobile && (
-              <IconButton size="small" onClick={() => setNotifOpen(true)}>
-                <Badge badgeContent={notifications.length} color="error" max={9}>
+              <IconButton size="small" onClick={handleOpenNotif}>
+                <Badge badgeContent={unreadCount} color="error" max={9}>
                   <NotificationsNoneIcon sx={{ color: darkMode ? '#fff' : '#555' }} />
                 </Badge>
               </IconButton>
@@ -142,14 +148,21 @@ export default function Feed({ darkMode, setDarkMode }) {
         )}
       </AppBar>
 
-      <NotificationDrawer open={notifOpen} onClose={() => setNotifOpen(false)}
-        notifications={notifications} darkMode={darkMode} />
+      {/* Notification drawer — markAllRead called inside on open */}
+      <NotificationDrawer
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        markAllRead={markAllRead}
+        darkMode={darkMode}
+      />
 
       <Container maxWidth="sm" sx={{ pt: { xs: 1.5, sm: 2 }, px: { xs: 1, sm: 2 } }}>
         <CreatePostBox onPost={handlePostCreated} darkMode={darkMode} />
 
-        {/* ✨ New posts banner — appears when background poll detects new posts */}
-        <Collapse in={newPostCount > 0}>
+        {/* New post banner — simple boolean, no count */}
+        <Collapse in={hasNewPost}>
           <Box
             onClick={refreshFeed}
             sx={{
@@ -157,12 +170,12 @@ export default function Feed({ darkMode, setDarkMode }) {
               bgcolor: '#1976d2', borderRadius: 5,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
               cursor: 'pointer', boxShadow: '0 4px 14px rgba(25,118,210,0.35)',
-              '&:hover': { bgcolor: '#1565c0' }, transition: 'bgcolor 0.2s'
+              '&:hover': { bgcolor: '#1565c0' }, transition: 'all 0.2s'
             }}
           >
             <KeyboardArrowUpIcon sx={{ color: '#fff', fontSize: 20 }} />
             <Typography variant="body2" fontWeight={700} color="#fff">
-              {newPostCount} new post{newPostCount > 1 ? 's' : ''} — tap to refresh
+              New post — tap to refresh
             </Typography>
           </Box>
         </Collapse>
@@ -185,7 +198,6 @@ export default function Feed({ darkMode, setDarkMode }) {
           </Tabs>
         </Paper>
 
-        {/* Posts */}
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <Paper key={i} elevation={0} sx={{
@@ -230,8 +242,8 @@ export default function Feed({ darkMode, setDarkMode }) {
               onClick={() => { setBottomNav(0); navigate('/'); }}
               sx={{ color: '#fff !important', opacity: bottomNav === 0 ? 1 : 0.6, minWidth: 0 }} />
             <BottomNavigationAction
-              icon={<Badge badgeContent={notifications.length} color="error" max={9}><NotificationsNoneIcon /></Badge>}
-              onClick={() => { setBottomNav(1); setNotifOpen(true); }}
+              icon={<Badge badgeContent={unreadCount} color="error" max={9}><NotificationsNoneIcon /></Badge>}
+              onClick={handleOpenNotif}
               sx={{ color: '#fff !important', opacity: bottomNav === 1 ? 1 : 0.6, minWidth: 0 }} />
             <BottomNavigationAction icon={<AccountCircleIcon />}
               onClick={() => { setBottomNav(2); navigate('/profile'); }}

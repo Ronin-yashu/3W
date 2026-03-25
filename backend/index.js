@@ -6,6 +6,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -13,6 +15,18 @@ import authRoutes from './routes/auth.js';
 import postRoutes from './routes/posts.js';
 
 const app = express();
+const httpServer = createServer(app);
+
+// Socket.io — broadcast likes/comments in real-time to all connected clients
+export const io = new Server(httpServer, {
+  cors: { origin: 'http://localhost:5173', credentials: true }
+});
+
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+  socket.on('disconnect', () => console.log('Client disconnected:', socket.id));
+});
+
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -24,4 +38,4 @@ mongoose.connect(process.env.MONGO_URI, { family: 4 })
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 
-app.listen(5000, () => console.log('Server running on 5000'));
+httpServer.listen(5000, () => console.log('Server running on 5000 ✅'));
