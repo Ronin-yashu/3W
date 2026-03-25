@@ -3,9 +3,9 @@ import { Box, Typography, AppBar, Toolbar, Button, Container, CircularProgress, 
 import AddIcon from '@mui/icons-material/Add';
 import LogoutIcon from '@mui/icons-material/Logout';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import PostCard from '../../../components/PostCard';
+import PostCard from '../components/PostCard';
 
 export default function Feed() {
   const { user, logout } = useAuth();
@@ -51,7 +51,6 @@ export default function Feed() {
           </Box>
         </Toolbar>
       </AppBar>
-
       <Container maxWidth="sm" sx={{ py: 3 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" mt={6}><CircularProgress /></Box>
