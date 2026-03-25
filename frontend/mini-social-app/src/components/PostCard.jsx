@@ -1,13 +1,12 @@
 /**
  * PostCard.jsx
- * Features: optimistic like/comment, follow button, edit post, delete post,
+ * Features: optimistic like/comment, edit post (owner), delete post (owner),
  * emoji picker, char counter on comment.
- * No lightbox, no bio, no profile grid — clean and focused.
  */
 import {
   Card, CardContent, Typography, IconButton, Box, TextField,
-  Avatar, Collapse, Divider, Snackbar, Alert, Chip,
-  useTheme, useMediaQuery, Menu, MenuItem, ListItemIcon, Dialog
+  Avatar, Collapse, Divider, Snackbar, Alert,
+  useTheme, useMediaQuery, Menu, MenuItem, ListItemIcon
 } from '@mui/material';
 import FavoriteIcon             from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon       from '@mui/icons-material/FavoriteBorder';
@@ -43,8 +42,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
   const [editText, setEditText]         = useState(post.text || '');
   const [saving, setSaving]             = useState(false);
   const [showEmoji, setShowEmoji]       = useState(false);
-  const [following, setFollowing]       = useState(false);
-  const [followLoading, setFollowLoading] = useState(false);
 
   const isLiked    = post.likes?.some(l => l.userId === user?.userId);
   const isOwner    = post.username === user?.username;
@@ -53,7 +50,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
   const commentBg  = darkMode ? '#2a2a2a' : '#f5f7fa';
   const isPortrait = imgSize.h > imgSize.w * 1.1;
 
-  // ── Like (optimistic) ───────────────────────────────────────────────────
   const handleLike = useCallback(async () => {
     if (liking) return;
     setLiking(true);
@@ -71,7 +67,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     finally { setLiking(false); }
   }, [liking, post, onUpdate, user]);
 
-  // ── Comment (optimistic) ────────────────────────────────────────────────
   const handleComment = useCallback(async () => {
     if (!comment.trim()) return;
     const text = comment.trim();
@@ -89,7 +84,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     } catch { onUpdate(post); }
   }, [comment, post, onUpdate, user]);
 
-  // ── Delete ──────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     setMenuAnchor(null);
     try {
@@ -98,7 +92,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     } catch { alert('Failed to delete post'); }
   };
 
-  // ── Edit ────────────────────────────────────────────────────────────────
   const handleSaveEdit = async () => {
     if (!editText.trim() || editText === post.text) { setEditing(false); return; }
     setSaving(true);
@@ -110,18 +103,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
     finally { setSaving(false); }
   };
 
-  // ── Follow (optimistic) ─────────────────────────────────────────────────
-  const handleFollow = async () => {
-    if (followLoading || isOwner) return;
-    setFollowLoading(true);
-    setFollowing(f => !f);
-    try {
-      await api.post(`/api/users/${post.userId}/follow`);
-    } catch { setFollowing(f => !f); }
-    finally { setFollowLoading(false); }
-  };
-
-  // ── Share ────────────────────────────────────────────────────────────────
   const handleShare = () =>
     navigator.clipboard.writeText(window.location.origin + '/?post=' + post._id)
       .then(() => setCopied(true));
@@ -155,32 +136,14 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
               </Box>
             </Box>
 
-            <Box display="flex" alignItems="center" gap={0.5}>
-              {!isOwner ? (
-                <Chip
-                  label={following ? 'Following' : 'Follow'}
-                  size="small"
-                  onClick={handleFollow}
-                  sx={{
-                    bgcolor: following ? 'transparent' : '#1976d2',
-                    color: following ? (darkMode ? '#aaa' : '#555') : '#fff',
-                    border: following ? '1px solid' : 'none',
-                    borderColor: darkMode ? '#555' : '#ccc',
-                    fontWeight: 700, fontSize: { xs: 10, sm: 11 }, height: { xs: 24, sm: 26 },
-                    borderRadius: 5, cursor: 'pointer',
-                    '&:hover': { bgcolor: following ? (darkMode ? '#2a2a2a' : '#f5f5f5') : '#1565c0' },
-                    '& .MuiChip-label': { px: 1.2 }
-                  }}
-                />
-              ) : (
-                <IconButton size="small" onClick={e => setMenuAnchor(e.currentTarget)} sx={{ color: darkMode ? '#aaa' : '#888' }}>
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
+            {/* ⋮ menu only on own posts — no follow button */}
+            {isOwner && (
+              <IconButton size="small" onClick={e => setMenuAnchor(e.currentTarget)} sx={{ color: darkMode ? '#aaa' : '#888' }}>
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+            )}
           </Box>
 
-          {/* Post text or edit */}
           {editing ? (
             <Box mt={1.5}>
               <TextField fullWidth multiline minRows={2} maxRows={8} value={editText}
@@ -204,7 +167,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
           ) : null}
         </CardContent>
 
-        {/* Image */}
         {post.imageUrl && (
           <Box sx={{ width: '100%', bgcolor: darkMode ? '#111' : '#f0f0f0', display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
             <Box component="img" src={post.imageUrl} alt="post"
@@ -302,7 +264,6 @@ export default function PostCard({ post, onUpdate, onDelete, darkMode }) {
         </CardContent>
       </Card>
 
-      {/* 3-dot menu — own posts only */}
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}
         PaperProps={{ sx: { borderRadius: 2, minWidth: 140, bgcolor: darkMode ? '#1e1e1e' : '#fff', border: '1px solid', borderColor: darkMode ? '#2a2a2a' : '#e8eaf0' } }}>
         <MenuItem onClick={() => { setEditing(true); setEditText(post.text || ''); setMenuAnchor(null); }}>
