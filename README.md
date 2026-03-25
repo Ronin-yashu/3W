@@ -200,4 +200,4 @@ Only **2 collections** as required:
 
 ## 👨‍💻 Author
 
-Built with ❤️ by **Yash** for the **TripleW Solutions Full Stack Internship Assignment**.
+Built with ❤️ by **Yash** for the **3W Solutions Full Stack Internship Assignment**.
