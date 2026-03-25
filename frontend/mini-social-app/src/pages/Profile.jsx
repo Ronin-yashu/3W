@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Avatar, Paper, Container, AppBar, Toolbar, IconButton, Divider, CircularProgress } from '@mui/material';
+import {
+  Box, Typography, Avatar, Paper, Container, AppBar, Toolbar,
+  IconButton, Divider, CircularProgress, useTheme
+} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
@@ -10,6 +13,8 @@ import { useNavigate } from 'react-router-dom';
 export default function Profile() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,22 +28,34 @@ export default function Profile() {
   const totalComments = posts.reduce((sum, p) => sum + (p.comments?.length || 0), 0);
 
   return (
-    <Box bgcolor="#f0f2f5" minHeight="100vh">
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#fff', borderBottom: '1px solid #e8eaf0' }}>
+    <Box minHeight="100vh" bgcolor={isDark ? '#121212' : '#f0f2f5'}>
+      <AppBar position="sticky" elevation={0}
+        sx={{ bgcolor: isDark ? '#1e1e1e' : '#fff', borderBottom: '1px solid', borderColor: isDark ? '#333' : '#e8eaf0' }}>
         <Toolbar>
-          <IconButton onClick={() => navigate('/')} edge="start" sx={{ color: '#1976d2' }}><ArrowBackIcon /></IconButton>
+          <IconButton onClick={() => navigate('/')} edge="start" sx={{ color: '#1976d2' }}>
+            <ArrowBackIcon />
+          </IconButton>
           <Typography variant="h6" fontWeight={700} ml={1} sx={{ color: '#1976d2' }}>Profile</Typography>
         </Toolbar>
       </AppBar>
 
       <Container maxWidth="sm" sx={{ pt: 3 }}>
-        {/* Profile Header */}
-        <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #e8eaf0', p: 3, mb: 2, textAlign: 'center' }}>
-          <Avatar sx={{ width: 80, height: 80, bgcolor: '#1976d2', fontSize: 32, fontWeight: 700, mx: 'auto', mb: 2 }}>
+        {/* Profile Card - respects theme */}
+        <Paper elevation={0} sx={{
+          borderRadius: 3,
+          border: '1px solid', borderColor: isDark ? '#333' : '#e8eaf0',
+          bgcolor: isDark ? '#1e1e1e' : '#fff',
+          p: 3, mb: 2, textAlign: 'center'
+        }}>
+          <Avatar sx={{
+            width: 80, height: 80, bgcolor: '#1976d2',
+            fontSize: 32, fontWeight: 700, mx: 'auto', mb: 2
+          }}>
             {user?.username?.[0]?.toUpperCase()}
           </Avatar>
           <Typography variant="h6" fontWeight={700}>{user?.username}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ color: '#1976d2' }}>@{user?.username}</Typography>
+          <Typography variant="body2" sx={{ color: '#1976d2', fontWeight: 500 }}>@{user?.username}</Typography>
+
           <Box display="flex" justifyContent="center" gap={4} mt={2.5}>
             <Box textAlign="center">
               <Typography variant="h5" fontWeight={800}>{posts.length}</Typography>
@@ -55,8 +72,8 @@ export default function Profile() {
           </Box>
         </Paper>
 
-        {/* User Posts */}
-        <Typography variant="subtitle1" fontWeight={700} mb={1.5}>My Posts</Typography>
+        <Typography variant="subtitle1" fontWeight={700} mb={1.5} color="text.primary">My Posts</Typography>
+
         {loading ? (
           <Box display="flex" justifyContent="center" mt={4}><CircularProgress /></Box>
         ) : posts.length === 0 ? (
@@ -66,9 +83,19 @@ export default function Profile() {
           </Box>
         ) : (
           posts.map(post => (
-            <Paper key={post._id} elevation={0} sx={{ borderRadius: 3, border: '1px solid #e8eaf0', p: 2, mb: 1.5 }}>
-              <Typography variant="body1" sx={{ color: '#2d3748' }}>{post.text || '📷 Image post'}</Typography>
-              {post.imageUrl && <Box mt={1}><img src={post.imageUrl} alt="post" style={{ width: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'cover' }} /></Box>}
+            <Paper key={post._id} elevation={0} sx={{
+              borderRadius: 3,
+              border: '1px solid', borderColor: isDark ? '#333' : '#e8eaf0',
+              bgcolor: isDark ? '#1e1e1e' : '#fff',
+              p: 2, mb: 1.5
+            }}>
+              <Typography variant="body1">{post.text || '📷 Image post'}</Typography>
+              {post.imageUrl && (
+                <Box mt={1}>
+                  <img src={post.imageUrl} alt="post"
+                    style={{ width: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'cover' }} />
+                </Box>
+              )}
               <Divider sx={{ my: 1 }} />
               <Box display="flex" gap={3}>
                 <Box display="flex" alignItems="center" gap={0.5}>

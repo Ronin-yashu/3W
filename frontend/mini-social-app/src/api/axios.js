@@ -1,14 +1,8 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/' });
-
-// Auto-attach JWT token to every request
-api.interceptors.request.use((config) => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  if (user?.token) {
-    config.headers.Authorization = `Bearer ${user.token}`;
-  }
-  return config;
+const api = axios.create({
+  baseURL: '/',
+  withCredentials: true  // send cookies with every request
 });
 
 // Auto logout on 401
