@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Button, TextField, Typography, Paper, Link } from '@mui/material';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 export default function Signup() {
@@ -29,28 +29,13 @@ export default function Signup() {
         <Typography variant="body2" color="text.secondary" textAlign="center" mb={3}>Join the community</Typography>
         {error && <Typography color="error" variant="body2" mb={2}>{error}</Typography>}
         <form onSubmit={handleSubmit}>
-          <TextField
-            label="Username" fullWidth required
-            value={form.username} onChange={e => setForm({ ...form, username: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Email" type="email" fullWidth required
-            value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Password" type="password" fullWidth required
-            value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-            sx={{ mb: 3 }}
-          />
-          <Button type="submit" variant="contained" fullWidth size="large" sx={{ borderRadius: 2 }}>
-            Sign Up
-          </Button>
+          <TextField label="Username" fullWidth required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} sx={{ mb: 2 }} />
+          <TextField label="Email" type="email" fullWidth required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} sx={{ mb: 2 }} />
+          <TextField label="Password" type="password" fullWidth required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} sx={{ mb: 3 }} />
+          <Button type="submit" variant="contained" fullWidth size="large" sx={{ borderRadius: 2 }}>Sign Up</Button>
         </form>
         <Typography variant="body2" textAlign="center" mt={2}>
-          Already have an account?{' '}
-          <Link component={RouterLink} to="/login">Login</Link>
+          Already have an account?{' '}<Link component={RouterLink} to="/login">Login</Link>
         </Typography>
       </Paper>
     </Box>

@@ -9,7 +9,6 @@ export default function PostCard({ post, onUpdate }) {
   const { user } = useAuth();
   const [comment, setComment] = useState('');
   const headers = { Authorization: `Bearer ${user?.token}` };
-
   const isLiked = post.likes?.some(l => l.userId === user?.userId);
 
   const handleLike = async () => {
@@ -35,9 +34,7 @@ export default function PostCard({ post, onUpdate }) {
         </Box>
         {post.text && <Typography variant="body1" mt={1.5} mb={0.5}>{post.text}</Typography>}
       </CardContent>
-      {post.imageUrl && (
-        <CardMedia component="img" image={post.imageUrl} sx={{ maxHeight: 400, objectFit: 'cover' }} />
-      )}
+      {post.imageUrl && <CardMedia component="img" image={post.imageUrl} sx={{ maxHeight: 400, objectFit: 'cover' }} />}
       <CardContent sx={{ pt: 1 }}>
         <Box display="flex" alignItems="center" gap={1} mb={1}>
           <IconButton onClick={handleLike} size="small" color={isLiked ? 'error' : 'default'}>
@@ -51,13 +48,7 @@ export default function PostCard({ post, onUpdate }) {
         ))}
         {user && (
           <Box display="flex" gap={1} mt={1.5}>
-            <TextField
-              size="small" value={comment}
-              onChange={e => setComment(e.target.value)}
-              placeholder="Write a comment..."
-              fullWidth
-              onKeyDown={e => e.key === 'Enter' && handleComment()}
-            />
+            <TextField size="small" value={comment} onChange={e => setComment(e.target.value)} placeholder="Write a comment..." fullWidth onKeyDown={e => e.key === 'Enter' && handleComment()} />
             <Button variant="contained" onClick={handleComment} sx={{ borderRadius: 2 }}>Post</Button>
           </Box>
         )}

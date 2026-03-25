@@ -3,7 +3,7 @@ import { Box, Button, TextField, Typography, Paper, Container, AppBar, Toolbar, 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ImageIcon from '@mui/icons-material/Image';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function CreatePost() {
@@ -17,29 +17,19 @@ export default function CreatePost() {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
-    }
+    if (file) { setImage(file); setPreview(URL.createObjectURL(file)); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!text.trim() && !image) {
-      setError('Please add text or an image.');
-      return;
-    }
-    setLoading(true);
-    setError('');
+    if (!text.trim() && !image) { setError('Please add text or an image.'); return; }
+    setLoading(true); setError('');
     try {
       const formData = new FormData();
       if (text.trim()) formData.append('text', text);
       if (image) formData.append('image', image);
       await axios.post('/api/posts', formData, {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'multipart/form-data' }
       });
       navigate('/');
     } catch (err) {
@@ -57,22 +47,14 @@ export default function CreatePost() {
           <Typography variant="h6" fontWeight="bold" ml={1}>New Post</Typography>
         </Toolbar>
       </AppBar>
-
       <Container maxWidth="sm" sx={{ py: 3 }}>
         <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
           <Typography variant="subtitle1" fontWeight="bold" mb={2}>@{user?.username}</Typography>
           {error && <Typography color="error" variant="body2" mb={2}>{error}</Typography>}
           <form onSubmit={handleSubmit}>
-            <TextField
-              placeholder="What's on your mind?"
-              multiline rows={4} fullWidth
-              value={text} onChange={e => setText(e.target.value)}
-              sx={{ mb: 2 }}
-            />
+            <TextField placeholder="What's on your mind?" multiline rows={4} fullWidth value={text} onChange={e => setText(e.target.value)} sx={{ mb: 2 }} />
             {preview && (
-              <Box mb={2}>
-                <img src={preview} alt="preview" style={{ width: '100%', borderRadius: 8, maxHeight: 300, objectFit: 'cover' }} />
-              </Box>
+              <Box mb={2}><img src={preview} alt="preview" style={{ width: '100%', borderRadius: 8, maxHeight: 300, objectFit: 'cover' }} /></Box>
             )}
             <Box display="flex" justifyContent="space-between" alignItems="center">
               <Button component="label" startIcon={<ImageIcon />} variant="outlined" sx={{ borderRadius: 2 }}>

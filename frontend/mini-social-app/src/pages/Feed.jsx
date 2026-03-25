@@ -42,12 +42,8 @@ export default function Feed() {
               {user?.username?.[0]?.toUpperCase()}
             </Avatar>
             <Typography variant="body2" fontWeight="medium">@{user?.username}</Typography>
-            <Button startIcon={<AddIcon />} variant="contained" size="small" onClick={() => navigate('/create')} sx={{ borderRadius: 2, ml: 1 }}>
-              Post
-            </Button>
-            <Button startIcon={<LogoutIcon />} size="small" onClick={handleLogout} color="inherit">
-              Logout
-            </Button>
+            <Button startIcon={<AddIcon />} variant="contained" size="small" onClick={() => navigate('/create')} sx={{ borderRadius: 2, ml: 1 }}>Post</Button>
+            <Button startIcon={<LogoutIcon />} size="small" onClick={handleLogout} color="inherit">Logout</Button>
           </Box>
         </Toolbar>
       </AppBar>

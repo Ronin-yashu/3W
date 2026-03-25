@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Button, TextField, Typography, Paper, Link } from '@mui/material';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 export default function Login() {
@@ -29,23 +29,12 @@ export default function Login() {
         <Typography variant="body2" color="text.secondary" textAlign="center" mb={3}>Login to your account</Typography>
         {error && <Typography color="error" variant="body2" mb={2}>{error}</Typography>}
         <form onSubmit={handleSubmit}>
-          <TextField
-            label="Email" type="email" fullWidth required
-            value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Password" type="password" fullWidth required
-            value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-            sx={{ mb: 3 }}
-          />
-          <Button type="submit" variant="contained" fullWidth size="large" sx={{ borderRadius: 2 }}>
-            Login
-          </Button>
+          <TextField label="Email" type="email" fullWidth required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} sx={{ mb: 2 }} />
+          <TextField label="Password" type="password" fullWidth required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} sx={{ mb: 3 }} />
+          <Button type="submit" variant="contained" fullWidth size="large" sx={{ borderRadius: 2 }}>Login</Button>
         </form>
         <Typography variant="body2" textAlign="center" mt={2}>
-          Don't have an account?{' '}
-          <Link component={RouterLink} to="/signup">Sign up</Link>
+          Don't have an account?{' '}<Link component={RouterLink} to="/signup">Sign up</Link>
         </Typography>
       </Paper>
     </Box>
