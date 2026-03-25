@@ -19,13 +19,24 @@ const PublicRoute = ({ children }) => {
 };
 
 function AppRoutes() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+
   const theme = createTheme({
     palette: {
       mode: darkMode ? 'dark' : 'light',
       primary: { main: '#1976d2' },
+      background: {
+        default: darkMode ? '#121212' : '#f5f7fa',
+        paper: darkMode ? '#1e1e1e' : '#fff',
+      }
     },
-    typography: { fontFamily: "'Inter', 'Segoe UI', sans-serif" }
+    typography: { fontFamily: "'Inter', 'Segoe UI', sans-serif" },
+    components: {
+      MuiButton: { styleOverrides: { root: { textTransform: 'none' } } },
+      MuiTab: { styleOverrides: { root: { textTransform: 'none' } } },
+    }
   });
 
   return (

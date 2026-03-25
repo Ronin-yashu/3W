@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Box, Button, TextField, Typography, Paper, Link, InputAdornment, IconButton, Alert, Divider } from '@mui/material';
+import {
+  Box, Button, TextField, Typography, Paper,
+  InputAdornment, IconButton, Alert, Divider, useMediaQuery, useTheme
+} from '@mui/material';
 import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +11,8 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -26,58 +31,67 @@ export default function Login() {
   };
 
   return (
-    <Box minHeight="100vh" display="flex">
-      {/* Left Panel */}
-      <Box flex={1} sx={{
-        display: { xs: 'none', md: 'flex' }, flexDirection: 'column',
+    <Box minHeight="100vh" display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
+      {/* Left Branding Panel — hidden on mobile, shown as top strip on tablet */}
+      <Box sx={{
+        flex: { md: 1 },
+        display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(145deg, #1565c0 0%, #1976d2 50%, #42a5f5 100%)',
-        p: 6, color: '#fff'
+        background: 'linear-gradient(145deg, #1565c0 0%, #1976d2 55%, #42a5f5 100%)',
+        p: { xs: 4, md: 6 },
+        minHeight: { xs: 200, md: 'unset' },
+        color: '#fff'
       }}>
-        <Typography variant="h2" fontWeight={800} mb={2}>📣</Typography>
-        <Typography variant="h3" fontWeight={800} mb={2}>SocialFeed</Typography>
-        <Typography variant="h6" fontWeight={400} textAlign="center" sx={{ opacity: 0.85, maxWidth: 320 }}>
-          Connect, share, and engage with your community in real time.
+        <Typography variant="h2" fontWeight={800} mb={1} sx={{ fontSize: { xs: 40, md: 56 } }}>📣</Typography>
+        <Typography variant="h4" fontWeight={800} mb={1.5} sx={{ fontSize: { xs: 26, md: 36 } }}>SocialFeed</Typography>
+        <Typography variant="body1" textAlign="center" sx={{ opacity: 0.85, maxWidth: 300, fontSize: { xs: 13, md: 16 } }}>
+          Connect, share, and engage with your community.
         </Typography>
-        <Box mt={5} display="flex" gap={2} flexWrap="wrap" justifyContent="center">
-          {['Real-time posts', 'Like & Comment', 'Dark Mode', 'JWT Secure'].map(f => (
-            <Box key={f} sx={{ bgcolor: 'rgba(255,255,255,0.15)', px: 2, py: 0.8, borderRadius: 5, fontSize: 13, fontWeight: 600 }}>{f}</Box>
+        <Box mt={3} display="flex" gap={1} flexWrap="wrap" justifyContent="center">
+          {['Real-time posts', 'Like & Comment', 'Dark Mode', 'Secure Auth'].map(f => (
+            <Box key={f} sx={{ bgcolor: 'rgba(255,255,255,0.18)', px: 1.5, py: 0.5, borderRadius: 5, fontSize: { xs: 11, md: 13 }, fontWeight: 600 }}>{f}</Box>
           ))}
         </Box>
       </Box>
 
-      {/* Right Panel */}
-      <Box flex={1} display="flex" alignItems="center" justifyContent="center" bgcolor="#f5f7fa" p={3}>
-        <Paper elevation={0} sx={{ p: { xs: 3, sm: 5 }, width: '100%', maxWidth: 420, borderRadius: 4, border: '1px solid #e8eaf0' }}>
-          <Box mb={4}>
-            <Typography variant="h5" fontWeight={800} color="primary">Welcome back 👋</Typography>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>Sign in to your account to continue</Typography>
+      {/* Right Form Panel */}
+      <Box flex={1} display="flex" alignItems="center" justifyContent="center"
+        bgcolor="#f5f7fa" p={{ xs: 2, sm: 3 }}>
+        <Paper elevation={0} sx={{
+          p: { xs: 3, sm: 4, md: 5 },
+          width: '100%', maxWidth: { xs: '100%', sm: 420 },
+          borderRadius: { xs: 3, sm: 4 },
+          border: '1px solid #e8eaf0'
+        }}>
+          <Box mb={3}>
+            <Typography variant="h5" fontWeight={800} color="primary" fontSize={{ xs: 20, sm: 24 }}>Welcome back 👋</Typography>
+            <Typography variant="body2" color="text.secondary" mt={0.5}>Sign in to your account</Typography>
           </Box>
-          {error && <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2 }}>{error}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2, fontSize: 13 }}>{error}</Alert>}
           <form onSubmit={handleSubmit}>
-            <Typography variant="caption" fontWeight={600} color="text.secondary">EMAIL ADDRESS</Typography>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" letterSpacing={0.5}>EMAIL ADDRESS</Typography>
             <TextField type="email" fullWidth required placeholder="you@example.com"
               value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
               InputProps={{ startAdornment: <InputAdornment position="start"><Email sx={{ color: '#1976d2', fontSize: 18 }} /></InputAdornment> }}
-              sx={{ mt: 0.5, mb: 2.5, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              sx={{ mt: 0.5, mb: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
-            <Typography variant="caption" fontWeight={600} color="text.secondary">PASSWORD</Typography>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" letterSpacing={0.5}>PASSWORD</Typography>
             <TextField type={showPass ? 'text' : 'password'} fullWidth required placeholder="Enter your password"
               value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><Lock sx={{ color: '#1976d2', fontSize: 18 }} /></InputAdornment>,
                 endAdornment: <InputAdornment position="end"><IconButton onClick={() => setShowPass(!showPass)} size="small" edge="end">{showPass ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}</IconButton></InputAdornment>
               }}
-              sx={{ mt: 0.5, mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              sx={{ mt: 0.5, mb: 2.5, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <Button type="submit" variant="contained" fullWidth size="large" disabled={loading}
-              sx={{ borderRadius: 2, py: 1.4, fontWeight: 700, fontSize: 15, textTransform: 'none', boxShadow: '0 4px 14px rgba(25,118,210,0.35)' }}>
+              sx={{ borderRadius: 2, py: 1.4, fontWeight: 700, fontSize: { xs: 14, sm: 15 }, textTransform: 'none', boxShadow: '0 4px 14px rgba(25,118,210,0.35)' }}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-          <Divider sx={{ my: 3 }}><Typography variant="caption" color="text.secondary">New here?</Typography></Divider>
+          <Divider sx={{ my: 2.5 }}><Typography variant="caption" color="text.secondary">New here?</Typography></Divider>
           <Button component={RouterLink} to="/signup" variant="outlined" fullWidth size="large"
-            sx={{ borderRadius: 2, py: 1.4, fontWeight: 600, textTransform: 'none' }}>
+            sx={{ borderRadius: 2, py: 1.3, fontWeight: 600, textTransform: 'none', fontSize: { xs: 13, sm: 14 } }}>
             Create an account
           </Button>
         </Paper>
