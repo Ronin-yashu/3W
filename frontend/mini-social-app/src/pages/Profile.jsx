@@ -36,7 +36,9 @@ export default function Profile() {
       <AppBar position="sticky" elevation={0}
         sx={{ bgcolor: cardBg, borderBottom: '1px solid', borderColor: border }}>
         <Toolbar>
-          <IconButton onClick={() => navigate('/')} edge="start" sx={{ color: '#1976d2' }}><ArrowBackIcon /></IconButton>
+          <IconButton onClick={() => navigate('/')} edge="start" sx={{ color: '#1976d2' }}>
+            <ArrowBackIcon />
+          </IconButton>
           <Typography variant="h6" fontWeight={700} ml={1} color="primary">Profile</Typography>
         </Toolbar>
       </AppBar>
@@ -49,9 +51,15 @@ export default function Profile() {
         <Paper elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: border, bgcolor: cardBg, p: 3, mb: 2.5 }}>
           <Box display="flex" alignItems="flex-end" gap={2} mb={2}>
             <Avatar sx={{
-              width: 80, height: 80, bgcolor: '#1976d2',
-              fontSize: 32, fontWeight={800}, border: '4px solid', borderColor: cardBg,
-              boxShadow: '0 4px 14px rgba(25,118,210,0.3)', mt: -5
+              width: 80,
+              height: 80,
+              bgcolor: '#1976d2',
+              fontSize: 32,
+              fontWeight: 800,
+              border: '4px solid',
+              borderColor: cardBg,
+              boxShadow: '0 4px 14px rgba(25,118,210,0.3)',
+              mt: -5
             }}>
               {user?.username?.[0]?.toUpperCase()}
             </Avatar>
@@ -83,7 +91,11 @@ export default function Profile() {
         <Box display="flex" alignItems="center" gap={1} mb={1.5}>
           <GridViewIcon sx={{ color: '#1976d2', fontSize: 20 }} />
           <Typography variant="subtitle1" fontWeight={700}>My Posts</Typography>
-          <Chip label={posts.length} size="small" sx={{ bgcolor: '#1976d2', color: '#fff', fontWeight: 700, height: 20, fontSize: 11 }} />
+          <Chip
+            label={posts.length}
+            size="small"
+            sx={{ bgcolor: '#1976d2', color: '#fff', fontWeight: 700, height: 20, fontSize: 11 }}
+          />
         </Box>
 
         {loading ? (
@@ -96,9 +108,22 @@ export default function Profile() {
           </Box>
         ) : (
           posts.map(post => (
-            <Paper key={post._id} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: border, bgcolor: cardBg, p: 2, mb: 1.5, transition: 'box-shadow 0.2s', '&:hover': { boxShadow: '0 2px 12px rgba(0,0,0,0.08)' } }}>
-              {post.text && <Typography variant="body2" sx={{ lineHeight: 1.6, mb: post.imageUrl ? 1 : 0 }}>{post.text}</Typography>}
-              {post.imageUrl && <Box><img src={post.imageUrl} alt="post" style={{ width: '100%', borderRadius: 8, maxHeight: 180, objectFit: 'cover' }} /></Box>}
+            <Paper key={post._id} elevation={0} sx={{
+              borderRadius: 3, border: '1px solid', borderColor: border, bgcolor: cardBg,
+              p: 2, mb: 1.5, transition: 'box-shadow 0.2s',
+              '&:hover': { boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }
+            }}>
+              {post.text && (
+                <Typography variant="body2" sx={{ lineHeight: 1.6, mb: post.imageUrl ? 1 : 0 }}>
+                  {post.text}
+                </Typography>
+              )}
+              {post.imageUrl && (
+                <Box>
+                  <img src={post.imageUrl} alt="post"
+                    style={{ width: '100%', borderRadius: 8, maxHeight: 180, objectFit: 'cover' }} />
+                </Box>
+              )}
               <Divider sx={{ my: 1 }} />
               <Box display="flex" gap={2}>
                 <Box display="flex" alignItems="center" gap={0.5}>
