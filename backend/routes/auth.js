@@ -6,8 +6,8 @@ import User from '../models/User.js';
 const router = express.Router();
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
+  secure: true,
+  sameSite: 'none',  // required for cross-domain (vercel <-> render)
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
 
