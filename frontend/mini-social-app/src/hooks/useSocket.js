@@ -13,7 +13,8 @@ export function useSocket() {
 
   useEffect(() => {
     if (!socketInstance) {
-      socketInstance = io(window.location.origin, {
+      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      socketInstance = io(BACKEND_URL, {
         path: '/socket.io',
         withCredentials: true,
         transports: ['websocket', 'polling'],
