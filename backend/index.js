@@ -17,8 +17,10 @@ import postRoutes from './routes/posts.js';
 const app = express();
 const httpServer = createServer(app);
 
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
 export const io = new Server(httpServer, {
-  cors: { origin: 'http://localhost:5173', credentials: true }
+  cors: { origin: CLIENT_URL, credentials: true }
 });
 
 io.on('connection', (socket) => {
@@ -26,7 +28,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log('Client disconnected:', socket.id));
 });
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
